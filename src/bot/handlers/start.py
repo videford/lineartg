@@ -23,14 +23,18 @@ MAX_NAME_LEN = 100
 
 @router.message(CommandStart())
 async def cmd_start(
-    message: Message, user: User, state: FSMContext, i18n: I18nContext
+    message: Message,
+    user: User,
+    session: AsyncSession,
+    state: FSMContext,
+    i18n: I18nContext,
 ) -> None:
     # First contact (or not yet registered): collect the real first/last name.
     if not user.registered:
         await state.set_state(Registration.waiting_full_name)
         await message.answer(i18n.get("reg-ask-name"))
         return
-    await _show_main(message, user, i18n)
+    await _show_main(message, user, session, i18n)
 
 
 @router.message(Registration.waiting_full_name)
@@ -57,11 +61,15 @@ async def reg_name_received(
     await message.answer(i18n.get("start-choose-lang"), reply_markup=lang_keyboard())
 
 
-async def _show_main(message: Message, user: User, i18n: I18nContext) -> None:
+async def _show_main(
+    message: Message, user: User, session: AsyncSession, i18n: I18nContext
+) -> None:
+    is_admin = can(user.role, Action.MANAGE_LEADS)
+    is_lead = await is_any_lead(session, user.telegram_id)
     await message.answer(
-        i18n.get("start-welcome", name=user.display_name, role=user.role.value)
+        i18n.get("start-welcome", name=user.display_name, role=user.role.value),
+        reply_markup=main_menu(i18n, is_admin=is_admin, is_lead=is_lead),
     )
-    await message.answer(i18n.get("start-choose-lang"), reply_markup=lang_keyboard())
 
 
 @router.callback_query(F.data.startswith("lang:"))

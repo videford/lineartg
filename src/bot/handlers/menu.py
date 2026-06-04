@@ -4,6 +4,8 @@ language-independent. Most buttons delegate to the existing command handlers.
 """
 from __future__ import annotations
 
+import logging
+
 from aiogram import F, Router
 from aiogram.filters import Command, StateFilter
 from aiogram.fsm.context import FSMContext
@@ -37,6 +39,7 @@ from bot.services.users import list_members  # noqa: F401  (kept for parity)
 from bot.states import Search
 
 router = Router(name="menu")
+log = logging.getLogger(__name__)
 
 
 async def show_menu(message: Message, user: User, session: AsyncSession, i18n: I18nContext) -> None:
@@ -192,4 +195,26 @@ async def adm_setlead(
 @router.callback_query(F.data == "adm:leads")
 async def adm_leads(call: CallbackQuery, user: User, session: AsyncSession, i18n: I18nContext) -> None:
     await admin_h.cmd_leads(call.message, user, session, i18n)
+    await call.answer()
+
+
+# ── fallbacks (registered LAST so specific handlers win) ─────
+
+
+@router.message(StateFilter(None))
+async def fallback_message(
+    message: Message, user: User, session: AsyncSession, i18n: I18nContext
+) -> None:
+    """Any idle message that matched nothing — guide the user to the menu so the
+    bot always responds instead of silently dropping the update."""
+    log.info("fallback: unhandled idle message from %s: %r", user.telegram_id, message.text)
+    if message.chat.type != "private":
+        return  # stay quiet in groups to avoid noise
+    await show_menu(message, user, session, i18n)
+
+
+@router.callback_query()
+async def fallback_callback(call: CallbackQuery, i18n: I18nContext) -> None:
+    """Acknowledge any stale/unknown callback so the button stops spinning."""
+    log.info("fallback: unhandled callback %r", call.data)
     await call.answer()
