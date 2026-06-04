@@ -12,6 +12,7 @@ from bot.keyboards.inline import members_keyboard, projects_keyboard
 from bot.services import workspace
 from bot.services.permissions import can_create_in
 from bot.services.projects import get_project, manageable_projects, project_team
+from bot.services.subscriptions import subscribe
 from bot.states import AssignTask
 
 router = Router(name="assign")
@@ -115,6 +116,7 @@ async def assign_title_received(
         actor_name=user.display_name,
         actor_icon=user.avatar_url,
     )
+    await subscribe(session, assignee.telegram_id, issue["id"])
     await state.clear()
     await message.answer(
         i18n.get("task-created", identifier=issue["identifier"], url=issue["url"])

@@ -90,18 +90,20 @@ async def _render(
     lines = [f"<b>{html.escape(title)}</b> — {i18n.get('list-count', n=len(view))}"]
     if not chunk:
         lines.append(i18n.get("list-empty"))
-    for n, it in enumerate(chunk, start=1):
+    for offset, it in enumerate(chunk):
+        num = start + offset + 1  # continuous across pages: 1..10, 11..20, …
         lines.append(
-            f"{n}. <b>{html.escape(it['identifier'])}</b> · "
+            f"{num}. <b>{html.escape(it['identifier'])}</b> · "
             f"{html.escape(it['title'])} — {html.escape(it['state_name'])}"
         )
     text = "\n".join(lines)
 
     kb = InlineKeyboardBuilder()
-    # number buttons (rows of 5)
+    # number buttons (rows of 5), labelled with the continuous number
     row: list[InlineKeyboardButton] = []
-    for n, _ in enumerate(chunk, start=1):
-        row.append(InlineKeyboardButton(text=str(n), callback_data=f"li:open:{start + n - 1}"))
+    for offset, _ in enumerate(chunk):
+        num = start + offset + 1
+        row.append(InlineKeyboardButton(text=str(num), callback_data=f"li:open:{start + offset}"))
         if len(row) == 5:
             kb.row(*row)
             row = []

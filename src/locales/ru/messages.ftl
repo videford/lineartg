@@ -85,6 +85,33 @@ card-f-assignee = Исполнитель
 card-f-due = Дедлайн
 card-f-estimate = Оценка
 card-f-labels = Метки
+card-f-subscribers = Подписчики
+
+# card buttons
+btn-status = 🔁 Статус
+btn-edit = ✏️ Изменить
+btn-assign = 👤 Назначить
+btn-comment = 💬 Комментарий
+btn-subscribe = 🔔 Подписаться
+btn-unsubscribe = 🔕 Отписаться
+btn-owner = 🔔 Исполнитель
+btn-subscribe-other = 👁 Подписать
+btn-refresh = 🔄 Обновить
+btn-open-linear = ↗️ В Linear
+btn-title = 📝 Заголовок
+btn-desc = 🧾 Описание
+btn-priority = ⚑ Приоритет
+btn-due = 📅 Дедлайн
+btn-estimate = 🔢 Оценка
+btn-labels = 🏷 Метки
+btn-clear = ✖ Снять
+btn-done = ✅ Готово
+due-today = Сегодня
+due-tomorrow = Завтра
+due-3d = +3 дня
+due-7d = +7 дней
+due-custom-btn = 📅 Ввести дату
+sub-owner-locked = Вы исполнитель этой задачи — отписаться нельзя.
 sub-on = 🔔 Вы подписаны
 sub-off = 🔕 Подписка отменена
 sub-other-done = Подписан: { $name }
@@ -117,7 +144,7 @@ menu-search = 🔎 Поиск
 menu-settings = ⚙️ Настройки
 menu-help = ❓ Помощь
 menu-admin = 🛠 Управление
-menu-projects = 📂 Проекты
+menu-projects = 📂 Мои проекты
 menu-browse = 🗂 Задачи
 
 # browse all tasks
@@ -131,8 +158,10 @@ team-no-projects = У вас нет проектов для управления
 team-choose-project = Выберите проект:
 team-view = Команда проекта «{ $project }»:
     { $members }
-    Нажмите ❌, чтобы убрать участника, или «Добавить».
 team-add-btn = ➕ Добавить участника
+team-remove-btn = ➖ Удалить участника
+team-remove-choose = Кого убрать из команды?
+team-none-removable = Некого убирать (остались только лиды).
 team-add-choose = Кого добавить в команду?
 team-back = ⬅️ Назад
 team-added = Добавлен
@@ -151,6 +180,16 @@ admin-connect = 🔗 Подключить Linear
 admin-sync = 🔄 Синхронизировать проекты
 admin-setlead = 👑 Назначить лида
 admin-leads = 📜 Список лидов
+admin-roles = 👑 Роли
+
+roles-choose-user = Кому изменить роль?
+roles-choose-role = { $name }: выберите роль
+roles-set-member = 👤 Участник
+roles-set-admin = 👑 Администратор
+roles-confirm-admin = ⚠️ Точно назначить «{ $name }» администратором? У него будет полный доступ.
+roles-yes = ✅ Да, назначить
+roles-no = ❌ Отмена
+roles-done = Роль «{ $name }» изменена на { $role }.
 
 search-prompt = Введите часть названия задачи для поиска:
 search-empty = Ничего не найдено.

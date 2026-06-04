@@ -58,19 +58,40 @@ async def _render_team(
     team = await project_team(session, project_id)
     leads = await _led_ids(session, project_id)
 
-    kb = InlineKeyboardBuilder()
-    for u in team:
-        if u.telegram_id in leads:
-            # Leads are managed via 👑 Назначить лида, not removable here.
-            kb.button(text=f"👑 {u.display_name}", callback_data="tmnoop")
-        else:
-            kb.button(text=f"❌ {u.display_name}", callback_data=f"tmrm:{u.telegram_id}")
-    kb.button(text=i18n.get("team-add-btn"), callback_data="tmadd")
-    kb.adjust(1)
+    members_lines = "\n".join(
+        ("👑 " if u.telegram_id in leads else "• ") + u.display_name for u in team
+    ) or "—"
+    text = i18n.get("team-view", project=project.name if project else "—", members=members_lines)
 
-    names = ", ".join(u.display_name for u in team) or "—"
-    text = i18n.get("team-view", project=project.name if project else "—", members=names)
+    kb = InlineKeyboardBuilder()
+    kb.button(text=i18n.get("team-add-btn"), callback_data="tmadd")
+    kb.button(text=i18n.get("team-remove-btn"), callback_data="tmremlist")
+    kb.adjust(1)
     await call.message.edit_text(text, reply_markup=kb.as_markup())
+
+
+@router.callback_query(F.data == "tmremlist")
+async def team_remove_list(
+    call: CallbackQuery, user: User, session: AsyncSession, state: FSMContext, i18n: I18nContext
+) -> None:
+    data = await state.get_data()
+    project_id = data.get("team_project")
+    if not project_id or not await can_manage_task(session, user, project_id):
+        await call.answer(i18n.get("err-no-permission"), show_alert=True)
+        return
+    team = await project_team(session, project_id)
+    leads = await _led_ids(session, project_id)
+    removable = [u for u in team if u.telegram_id not in leads]
+    if not removable:
+        await call.answer(i18n.get("team-none-removable"), show_alert=True)
+        return
+    kb = InlineKeyboardBuilder()
+    for u in removable:
+        kb.button(text=f"❌ {u.display_name}", callback_data=f"tmrm:{u.telegram_id}")
+    kb.button(text=i18n.get("team-back"), callback_data="tmback")
+    kb.adjust(1)
+    await call.message.edit_text(i18n.get("team-remove-choose"), reply_markup=kb.as_markup())
+    await call.answer()
 
 
 @router.callback_query(F.data.startswith("tmproj:"))

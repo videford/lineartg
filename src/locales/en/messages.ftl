@@ -85,6 +85,33 @@ card-f-assignee = Assignee
 card-f-due = Due
 card-f-estimate = Estimate
 card-f-labels = Labels
+card-f-subscribers = Subscribers
+
+# card buttons
+btn-status = 🔁 Status
+btn-edit = ✏️ Edit
+btn-assign = 👤 Assign
+btn-comment = 💬 Comment
+btn-subscribe = 🔔 Subscribe
+btn-unsubscribe = 🔕 Unsubscribe
+btn-owner = 🔔 Assignee
+btn-subscribe-other = 👁 Subscribe user
+btn-refresh = 🔄 Refresh
+btn-open-linear = ↗️ Open in Linear
+btn-title = 📝 Title
+btn-desc = 🧾 Description
+btn-priority = ⚑ Priority
+btn-due = 📅 Due date
+btn-estimate = 🔢 Estimate
+btn-labels = 🏷 Labels
+btn-clear = ✖ Clear
+btn-done = ✅ Done
+due-today = Today
+due-tomorrow = Tomorrow
+due-3d = +3 days
+due-7d = +7 days
+due-custom-btn = 📅 Enter date
+sub-owner-locked = You are the assignee of this task — you can't unsubscribe.
 sub-on = 🔔 Subscribed
 sub-off = 🔕 Unsubscribed
 sub-other-done = Subscribed: { $name }
@@ -117,7 +144,7 @@ menu-search = 🔎 Search
 menu-settings = ⚙️ Settings
 menu-help = ❓ Help
 menu-admin = 🛠 Manage
-menu-projects = 📂 Projects
+menu-projects = 📂 My projects
 menu-browse = 🗂 Tasks
 
 # browse all tasks
@@ -131,8 +158,10 @@ team-no-projects = You have no projects to manage a team for.
 team-choose-project = Choose a project:
 team-view = Team of "{ $project }":
     { $members }
-    Tap ❌ to remove a member, or Add.
 team-add-btn = ➕ Add member
+team-remove-btn = ➖ Remove member
+team-remove-choose = Who to remove from the team?
+team-none-removable = No one to remove (only leads remain).
 team-add-choose = Who to add to the team?
 team-back = ⬅️ Back
 team-added = Added
@@ -151,6 +180,16 @@ admin-connect = 🔗 Connect Linear
 admin-sync = 🔄 Sync projects
 admin-setlead = 👑 Assign lead
 admin-leads = 📜 Leads list
+admin-roles = 👑 Roles
+
+roles-choose-user = Whose role to change?
+roles-choose-role = { $name }: choose a role
+roles-set-member = 👤 Member
+roles-set-admin = 👑 Admin
+roles-confirm-admin = ⚠️ Make "{ $name }" an admin? They will get full access.
+roles-yes = ✅ Yes, grant
+roles-no = ❌ Cancel
+roles-done = { $name }'s role changed to { $role }.
 
 search-prompt = Type part of an issue title to search:
 search-empty = Nothing found.

@@ -31,7 +31,12 @@ from bot.linear import LinearClient
 from bot.services import workspace
 from bot.services.permissions import can_manage_task
 from bot.services.projects import is_project_team, project_team
-from bot.services.subscriptions import is_subscribed, subscribe, unsubscribe
+from bot.services.subscriptions import (
+    is_subscribed,
+    subscribe,
+    subscriber_ids,
+    unsubscribe,
+)
 from bot.services.users import OWNER_PREFIX
 from bot.states import Card
 
@@ -64,6 +69,16 @@ async def _resolve_owner_names(session: AsyncSession, issue: dict) -> list[str]:
     return [rows.get(lb, lb[len(OWNER_PREFIX):].replace("-", " ").title()) for lb in labels]
 
 
+async def _names_for_ids(session: AsyncSession, ids: list[int]) -> list[str]:
+    if not ids:
+        return []
+    rows = {
+        u.telegram_id: u.display_name
+        for u in await session.scalars(select(User).where(User.telegram_id.in_(ids)))
+    }
+    return [rows.get(i, str(i)) for i in ids]
+
+
 def _comment_author(c: dict) -> str:
     user = c.get("user") or {}
     if user.get("name"):
@@ -72,7 +87,9 @@ def _comment_author(c: dict) -> str:
     return bot_actor.get("userDisplayName") or "—"
 
 
-def _format_card(issue: dict, owner_names: list[str], i18n: I18nContext) -> str:
+def _format_card(
+    issue: dict, owner_names: list[str], subscriber_names: list[str], i18n: I18nContext
+) -> str:
     assignee = ", ".join(owner_names) or "—"
     other_labels = [
         lb["name"]
@@ -95,6 +112,11 @@ def _format_card(issue: dict, owner_names: list[str], i18n: I18nContext) -> str:
     ]
     if other_labels:
         lines.append(i18n.get("card-f-labels") + ": " + ", ".join(html.escape(x) for x in other_labels))
+    if subscriber_names:
+        lines.append(
+            i18n.get("card-f-subscribers") + ": "
+            + ", ".join(html.escape(x) for x in subscriber_names)
+        )
     if desc:
         lines.append("─────────")
         lines.append(html.escape(desc))
@@ -141,11 +163,18 @@ async def _render(
     )
     await state.set_state(None)
 
+    # The assignee is always subscribed and cannot opt out.
+    is_owner = bool(user.linear_label) and user.linear_label in _owner_labels(issue)
+    if is_owner and not await is_subscribed(session, user.telegram_id, issue_id):
+        await subscribe(session, user.telegram_id, issue_id)
+
     subscribed = await is_subscribed(session, user.telegram_id, issue_id)
     owner_names = await _resolve_owner_names(session, issue)
-    text = _format_card(issue, owner_names, i18n)
+    subscriber_names = await _names_for_ids(session, await subscriber_ids(session, issue_id))
+    text = _format_card(issue, owner_names, subscriber_names, i18n)
     kb = card_keyboard(
-        issue["url"], can_manage=manage, can_comment=True, subscribed=subscribed
+        i18n, issue["url"], can_manage=manage, can_comment=True,
+        subscribed=subscribed, is_owner=is_owner,
     )
     if call is not None:
         try:
@@ -222,7 +251,7 @@ async def show_status(
         return
     client = await workspace.get_client(session)
     states = await client.workflow_states(team_id)
-    await call.message.edit_reply_markup(reply_markup=states_keyboard(states))
+    await call.message.edit_reply_markup(reply_markup=states_keyboard(i18n, states))
     await call.answer()
 
 
@@ -250,7 +279,7 @@ async def edit_menu(
     issue_id, _, project_id = await _active(state)
     if not issue_id or not await _guard_manage(call, session, user, project_id, i18n):
         return
-    await call.message.edit_reply_markup(reply_markup=edit_menu_keyboard())
+    await call.message.edit_reply_markup(reply_markup=edit_menu_keyboard(i18n))
     await call.answer()
 
 
@@ -303,7 +332,7 @@ async def show_priority(call: CallbackQuery, state: FSMContext, i18n: I18nContex
     if not issue_id:
         await call.answer()
         return
-    await call.message.edit_reply_markup(reply_markup=priority_keyboard())
+    await call.message.edit_reply_markup(reply_markup=priority_keyboard(i18n))
     await call.answer()
 
 
@@ -326,7 +355,7 @@ async def show_estimate(call: CallbackQuery, state: FSMContext, i18n: I18nContex
     if not issue_id:
         await call.answer()
         return
-    await call.message.edit_reply_markup(reply_markup=estimate_keyboard())
+    await call.message.edit_reply_markup(reply_markup=estimate_keyboard(i18n))
     await call.answer()
 
 
@@ -351,7 +380,7 @@ async def show_due(call: CallbackQuery, state: FSMContext, i18n: I18nContext) ->
     if not issue_id:
         await call.answer()
         return
-    await call.message.edit_reply_markup(reply_markup=due_keyboard())
+    await call.message.edit_reply_markup(reply_markup=due_keyboard(i18n))
     await call.answer()
 
 
@@ -417,7 +446,7 @@ async def show_labels(
     issue = await client.get_issue(issue_id)
     team_labels = await client.labels(team_id)
     selected = {lb["id"] for lb in (issue.get("labels") or {}).get("nodes", [])}
-    await call.message.edit_reply_markup(reply_markup=labels_keyboard(team_labels, selected))
+    await call.message.edit_reply_markup(reply_markup=labels_keyboard(i18n, team_labels, selected))
     await call.answer()
 
 
@@ -438,7 +467,7 @@ async def toggle_label(
         current.add(label_id)
     await client.update_issue(issue_id, labelIds=list(current))
     team_labels = await client.labels(team_id)
-    await call.message.edit_reply_markup(reply_markup=labels_keyboard(team_labels, current))
+    await call.message.edit_reply_markup(reply_markup=labels_keyboard(i18n, team_labels, current))
     await call.answer(i18n.get("toast-saved"))
 
 
@@ -486,11 +515,17 @@ async def reassign(
     ]
     new_owner = await client.ensure_label(team_id, target.linear_label)
     await client.update_issue(issue_id, labelIds=[*kept, new_owner])
+    await subscribe(session, target.telegram_id, issue_id)  # assignee auto-follows
     await _render(call=call, message=None, issue_id=issue_id, user=user, session=session, state=state, i18n=i18n, client=client)
     await call.answer(i18n.get("toast-saved"))
 
 
 # ── subscriptions ────────────────────────────────────────────
+
+
+@router.callback_query(F.data == "act:subowner")
+async def sub_owner_locked(call: CallbackQuery, i18n: I18nContext) -> None:
+    await call.answer(i18n.get("sub-owner-locked"), show_alert=True)
 
 
 @router.callback_query(F.data == "act:subtoggle")
@@ -502,6 +537,12 @@ async def toggle_subscription(
         await call.answer()
         return
     if await is_subscribed(session, user.telegram_id, issue_id):
+        # The assignee may not unsubscribe.
+        client = await workspace.get_client(session)
+        issue = await client.get_issue(issue_id)
+        if issue and user.linear_label and user.linear_label in _owner_labels(issue):
+            await call.answer(i18n.get("sub-owner-locked"), show_alert=True)
+            return
         await unsubscribe(session, user.telegram_id, issue_id)
         toast = i18n.get("sub-off")
     else:

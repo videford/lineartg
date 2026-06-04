@@ -19,17 +19,20 @@ EMOJI_BROWSE = "🗂"
 def main_menu(i18n, *, is_admin: bool, is_lead: bool) -> ReplyKeyboardMarkup:
     can_manage = is_admin or is_lead
     if can_manage:
-        rows = [[KeyboardButton(text=i18n.get("menu-my")), KeyboardButton(text=i18n.get("menu-create"))]]
-        rows.append(
-            [KeyboardButton(text=i18n.get("menu-browse")), KeyboardButton(text=i18n.get("menu-search"))]
-        )
-        rows.append([KeyboardButton(text=i18n.get("menu-projects"))])
+        rows = [
+            [KeyboardButton(text=i18n.get("menu-my")), KeyboardButton(text=i18n.get("menu-projects"))],
+            [KeyboardButton(text=i18n.get("menu-create")), KeyboardButton(text=i18n.get("menu-search"))],
+            [KeyboardButton(text=i18n.get("menu-browse"))],
+            [KeyboardButton(text=i18n.get("menu-settings"))],
+        ]
+        if is_admin:
+            rows.append([KeyboardButton(text=i18n.get("menu-admin"))])
     else:
-        rows = [[KeyboardButton(text=i18n.get("menu-my")), KeyboardButton(text=i18n.get("menu-browse"))]]
-        rows.append([KeyboardButton(text=i18n.get("menu-search"))])
-    rows.append([KeyboardButton(text=i18n.get("menu-settings"))])
-    if is_admin:
-        rows.append([KeyboardButton(text=i18n.get("menu-admin"))])
+        rows = [
+            [KeyboardButton(text=i18n.get("menu-my")), KeyboardButton(text=i18n.get("menu-search"))],
+            [KeyboardButton(text=i18n.get("menu-browse"))],
+            [KeyboardButton(text=i18n.get("menu-settings"))],
+        ]
     return ReplyKeyboardMarkup(keyboard=rows, resize_keyboard=True, is_persistent=True)
 
 
@@ -48,6 +51,7 @@ def admin_menu(i18n) -> "InlineKeyboardMarkup":  # noqa: F821
     kb.button(text=i18n.get("admin-sync"), callback_data="adm:sync")
     kb.button(text=i18n.get("admin-setlead"), callback_data="adm:setlead")
     kb.button(text=i18n.get("admin-leads"), callback_data="adm:leads")
+    kb.button(text=i18n.get("admin-roles"), callback_data="adm:roles")
     kb.button(text=i18n.get("nav-close"), callback_data="nav:close")
     kb.adjust(1)
     return kb.as_markup()

@@ -23,6 +23,15 @@ KEYS = [
     "my-title", "search-results", "list-count", "list-empty",
     "list-f-all", "list-f-todo", "list-f-inprogress", "list-f-done", "list-f-backlog",
     "list-prev", "list-next", "list-page",
+    "team-remove-btn", "team-remove-choose", "team-none-removable",
+    "card-f-subscribers", "sub-owner-locked",
+    "admin-roles", "roles-choose-user", "roles-choose-role", "roles-set-member",
+    "roles-set-admin", "roles-confirm-admin", "roles-yes", "roles-no", "roles-done",
+    "btn-status", "btn-edit", "btn-assign", "btn-comment", "btn-subscribe",
+    "btn-unsubscribe", "btn-owner", "btn-subscribe-other", "btn-refresh",
+    "btn-open-linear", "btn-title", "btn-desc", "btn-priority", "btn-due",
+    "btn-estimate", "btn-labels", "btn-clear", "btn-done",
+    "due-today", "due-tomorrow", "due-3d", "due-7d", "due-custom-btn",
 ]
 ARGS = {
     "start-welcome": {"name": "X", "status": "Y"},
@@ -35,6 +44,9 @@ ARGS = {
     "sub-added-dm": {"identifier": "FLO-1", "by": "Y"},
     "list-count": {"n": 3},
     "list-page": {"page": 1, "total": 2},
+    "roles-choose-role": {"name": "X"},
+    "roles-confirm-admin": {"name": "X"},
+    "roles-done": {"name": "X", "role": "admin"},
 }
 
 core = FluentRuntimeCore(path=str(LOCALES_PATH))

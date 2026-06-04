@@ -85,6 +85,33 @@ card-f-assignee = Ijrochi
 card-f-due = Muddat
 card-f-estimate = Baho
 card-f-labels = Teglar
+card-f-subscribers = Obunachilar
+
+# card buttons
+btn-status = 🔁 Holat
+btn-edit = ✏️ Tahrirlash
+btn-assign = 👤 Biriktirish
+btn-comment = 💬 Izoh
+btn-subscribe = 🔔 Obuna
+btn-unsubscribe = 🔕 Obunani bekor qilish
+btn-owner = 🔔 Ijrochi
+btn-subscribe-other = 👁 Obuna qilish
+btn-refresh = 🔄 Yangilash
+btn-open-linear = ↗️ Linearda ochish
+btn-title = 📝 Sarlavha
+btn-desc = 🧾 Tavsif
+btn-priority = ⚑ Muhimlik
+btn-due = 📅 Muddat
+btn-estimate = 🔢 Baho
+btn-labels = 🏷 Teglar
+btn-clear = ✖ Olib tashlash
+btn-done = ✅ Tayyor
+due-today = Bugun
+due-tomorrow = Ertaga
+due-3d = +3 kun
+due-7d = +7 kun
+due-custom-btn = 📅 Sana kiritish
+sub-owner-locked = Siz bu vazifaning ijrochisisiz — obunani bekor qila olmaysiz.
 sub-on = 🔔 Obuna boʻldingiz
 sub-off = 🔕 Obuna bekor qilindi
 sub-other-done = Obuna qilindi: { $name }
@@ -117,7 +144,7 @@ menu-search = 🔎 Qidirish
 menu-settings = ⚙️ Sozlamalar
 menu-help = ❓ Yordam
 menu-admin = 🛠 Boshqaruv
-menu-projects = 📂 Loyihalar
+menu-projects = 📂 Mening loyihalarim
 menu-browse = 🗂 Vazifalar
 
 # browse all tasks
@@ -131,8 +158,10 @@ team-no-projects = Jamoasini boshqarish uchun loyihangiz yoʻq.
 team-choose-project = Loyihani tanlang:
 team-view = "{ $project }" loyihasi jamoasi:
     { $members }
-    Aʼzoni olib tashlash uchun ❌ yoki Qoʻshish bosing.
 team-add-btn = ➕ Aʼzo qoʻshish
+team-remove-btn = ➖ Aʼzoni olib tashlash
+team-remove-choose = Jamoadan kimni olib tashlaymiz?
+team-none-removable = Olib tashlash uchun hech kim yoʻq (faqat liderlar qoldi).
 team-add-choose = Jamoaga kimni qoʻshamiz?
 team-back = ⬅️ Orqaga
 team-added = Qoʻshildi
@@ -151,6 +180,16 @@ admin-connect = 🔗 Linearni ulash
 admin-sync = 🔄 Loyihalarni sinxronlash
 admin-setlead = 👑 Lider tayinlash
 admin-leads = 📜 Liderlar roʻyxati
+admin-roles = 👑 Rollar
+
+roles-choose-user = Kimning rolini oʻzgartiramiz?
+roles-choose-role = { $name }: rolni tanlang
+roles-set-member = 👤 Aʼzo
+roles-set-admin = 👑 Administrator
+roles-confirm-admin = ⚠️ «{ $name }»ni administrator qilamizmi? Unga toʻliq huquq beriladi.
+roles-yes = ✅ Ha, tayinlash
+roles-no = ❌ Bekor qilish
+roles-done = { $name } roli { $role } ga oʻzgartirildi.
 
 search-prompt = Qidirish uchun vazifa nomining bir qismini kiriting:
 search-empty = Hech narsa topilmadi.

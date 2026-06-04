@@ -14,7 +14,7 @@ from aiogram.utils.keyboard import InlineKeyboardBuilder
 from aiogram_i18n import I18nContext
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from bot.db import User
+from bot.db import Role, User
 from bot.handlers import admin as admin_h
 from bot.handlers import assign as assign_h
 from bot.handlers import browse as browse_h
@@ -38,7 +38,8 @@ from bot.services import workspace
 from bot.services.permissions import Action, can
 from bot.services.projects import sync_projects
 from bot.services.status import describe_status
-from bot.services.users import slug_label
+from bot.services.users import list_members, slug_label
+from bot.keyboards.inline import members_keyboard
 from bot.states import Profile, Search
 
 router = Router(name="menu")
@@ -260,6 +261,117 @@ async def adm_setlead(
 @router.callback_query(F.data == "adm:leads")
 async def adm_leads(call: CallbackQuery, user: User, session: AsyncSession, i18n: I18nContext) -> None:
     await admin_h.cmd_leads(call.message, user, session, i18n)
+    await call.answer()
+
+
+@router.callback_query(F.data == "adm:back")
+async def adm_back(call: CallbackQuery, i18n: I18nContext) -> None:
+    await call.message.edit_text(i18n.get("admin-title"), reply_markup=admin_menu(i18n))
+    await call.answer()
+
+
+# ── role management (with confirmation for admin) ────────────
+
+
+@router.callback_query(F.data == "adm:roles")
+async def adm_roles(
+    call: CallbackQuery, user: User, session: AsyncSession, i18n: I18nContext
+) -> None:
+    if not can(user.role, Action.MANAGE_ROLES):
+        await call.answer(i18n.get("err-no-permission"), show_alert=True)
+        return
+    members = await list_members(session)
+    await call.message.edit_text(
+        i18n.get("roles-choose-user"),
+        reply_markup=members_keyboard(members, prefix="rluser", back="adm:back"),
+    )
+    await call.answer()
+
+
+@router.callback_query(F.data.startswith("rluser:"))
+async def role_pick_user(
+    call: CallbackQuery, user: User, session: AsyncSession, state: FSMContext, i18n: I18nContext
+) -> None:
+    if not can(user.role, Action.MANAGE_ROLES):
+        await call.answer(i18n.get("err-no-permission"), show_alert=True)
+        return
+    tg_id = int(call.data.split(":", 1)[1])
+    target = await session.get(User, tg_id)
+    if target is None:
+        await call.answer(i18n.get("err-unknown-member"), show_alert=True)
+        return
+    await state.update_data(role_target=tg_id)
+    kb = InlineKeyboardBuilder()
+    kb.button(text=i18n.get("roles-set-member"), callback_data="rlset:member")
+    kb.button(text=i18n.get("roles-set-admin"), callback_data="rlset:admin")
+    kb.button(text=i18n.get("nav-back"), callback_data="adm:roles")
+    kb.adjust(1)
+    await call.message.edit_text(
+        i18n.get("roles-choose-role", name=target.display_name), reply_markup=kb.as_markup()
+    )
+    await call.answer()
+
+
+async def _apply_role(session: AsyncSession, tg_id: int, role: Role) -> User | None:
+    target = await session.get(User, tg_id)
+    if target is None:
+        return None
+    target.role = role
+    await session.commit()
+    return target
+
+
+@router.callback_query(F.data == "rlset:member")
+async def role_set_member(
+    call: CallbackQuery, user: User, session: AsyncSession, state: FSMContext, i18n: I18nContext
+) -> None:
+    if not can(user.role, Action.MANAGE_ROLES):
+        await call.answer(i18n.get("err-no-permission"), show_alert=True)
+        return
+    data = await state.get_data()
+    target = await _apply_role(session, data.get("role_target"), Role.member)
+    if target:
+        await call.message.edit_text(
+            i18n.get("roles-done", name=target.display_name, role="member")
+        )
+    await call.answer()
+
+
+@router.callback_query(F.data == "rlset:admin")
+async def role_set_admin_confirm(
+    call: CallbackQuery, user: User, session: AsyncSession, state: FSMContext, i18n: I18nContext
+) -> None:
+    if not can(user.role, Action.MANAGE_ROLES):
+        await call.answer(i18n.get("err-no-permission"), show_alert=True)
+        return
+    data = await state.get_data()
+    target = await session.get(User, data.get("role_target"))
+    if target is None:
+        await call.answer(i18n.get("err-unknown-member"), show_alert=True)
+        return
+    kb = InlineKeyboardBuilder()
+    kb.button(text=i18n.get("roles-yes"), callback_data="rlconfirm:admin")
+    kb.button(text=i18n.get("roles-no"), callback_data="adm:roles")
+    kb.adjust(2)
+    await call.message.edit_text(
+        i18n.get("roles-confirm-admin", name=target.display_name), reply_markup=kb.as_markup()
+    )
+    await call.answer()
+
+
+@router.callback_query(F.data == "rlconfirm:admin")
+async def role_confirm_admin(
+    call: CallbackQuery, user: User, session: AsyncSession, state: FSMContext, i18n: I18nContext
+) -> None:
+    if not can(user.role, Action.MANAGE_ROLES):
+        await call.answer(i18n.get("err-no-permission"), show_alert=True)
+        return
+    data = await state.get_data()
+    target = await _apply_role(session, data.get("role_target"), Role.admin)
+    if target:
+        await call.message.edit_text(
+            i18n.get("roles-done", name=target.display_name, role="admin")
+        )
     await call.answer()
 
 

@@ -61,82 +61,84 @@ def open_card_button(issue_id: str) -> InlineKeyboardMarkup:
 
 
 def card_keyboard(
-    url: str, *, can_manage: bool, can_comment: bool, subscribed: bool
+    i18n, url: str, *, can_manage: bool, can_comment: bool, subscribed: bool, is_owner: bool = False
 ) -> InlineKeyboardMarkup:
     kb = InlineKeyboardBuilder()
     if can_manage:
-        kb.button(text="🔁 Статус", callback_data="act:status")
-        kb.button(text="✏️ Изменить", callback_data="act:edit")
-        kb.button(text="👤 Назначить", callback_data="act:assign")
+        kb.button(text=i18n.get("btn-status"), callback_data="act:status")
+        kb.button(text=i18n.get("btn-edit"), callback_data="act:edit")
+        kb.button(text=i18n.get("btn-assign"), callback_data="act:assign")
     if can_comment:
-        kb.button(text="💬 Комментарий", callback_data="act:comment")
-    if subscribed:
-        kb.button(text="🔕 Отписаться", callback_data="act:subtoggle")
+        kb.button(text=i18n.get("btn-comment"), callback_data="act:comment")
+    if is_owner:
+        kb.button(text=i18n.get("btn-owner"), callback_data="act:subowner")
+    elif subscribed:
+        kb.button(text=i18n.get("btn-unsubscribe"), callback_data="act:subtoggle")
     else:
-        kb.button(text="🔔 Подписаться", callback_data="act:subtoggle")
+        kb.button(text=i18n.get("btn-subscribe"), callback_data="act:subtoggle")
     if can_manage:
-        kb.button(text="👁 Подписать", callback_data="act:subother")
-    kb.button(text="🔄 Обновить", callback_data="act:refresh")
-    kb.button(text="↗️ В Linear", url=url)
+        kb.button(text=i18n.get("btn-subscribe-other"), callback_data="act:subother")
+    kb.button(text=i18n.get("btn-refresh"), callback_data="act:refresh")
+    kb.button(text=i18n.get("btn-open-linear"), url=url)
     kb.adjust(2)
     return kb.as_markup()
 
 
-def edit_menu_keyboard() -> InlineKeyboardMarkup:
+def edit_menu_keyboard(i18n) -> InlineKeyboardMarkup:
     kb = InlineKeyboardBuilder()
-    kb.button(text="📝 Заголовок", callback_data="ed:title")
-    kb.button(text="🧾 Описание", callback_data="ed:desc")
-    kb.button(text="⚑ Приоритет", callback_data="ed:prio")
-    kb.button(text="📅 Дедлайн", callback_data="ed:due")
-    kb.button(text="🔢 Оценка", callback_data="ed:est")
-    kb.button(text="🏷 Метки", callback_data="ed:lbl")
-    kb.button(text="⬅️ Назад", callback_data="act:refresh")
+    kb.button(text=i18n.get("btn-title"), callback_data="ed:title")
+    kb.button(text=i18n.get("btn-desc"), callback_data="ed:desc")
+    kb.button(text=i18n.get("btn-priority"), callback_data="ed:prio")
+    kb.button(text=i18n.get("btn-due"), callback_data="ed:due")
+    kb.button(text=i18n.get("btn-estimate"), callback_data="ed:est")
+    kb.button(text=i18n.get("btn-labels"), callback_data="ed:lbl")
+    kb.button(text=i18n.get("nav-back"), callback_data="act:refresh")
     kb.adjust(2)
     return kb.as_markup()
 
 
-def states_keyboard(states: list[dict]) -> InlineKeyboardMarkup:
+def states_keyboard(i18n, states: list[dict]) -> InlineKeyboardMarkup:
     kb = InlineKeyboardBuilder()
     for s in states:
         kb.button(text=s["name"], callback_data=f"st:{s['id']}")
-    kb.button(text="⬅️ Назад", callback_data="act:refresh")
+    kb.button(text=i18n.get("nav-back"), callback_data="act:refresh")
     kb.adjust(2)
     return kb.as_markup()
 
 
-def priority_keyboard() -> InlineKeyboardMarkup:
+def priority_keyboard(i18n) -> InlineKeyboardMarkup:
     kb = InlineKeyboardBuilder()
     for value, label in PRIORITIES:
         kb.button(text=label, callback_data=f"pr:{value}")
-    kb.button(text="⬅️ Назад", callback_data="act:edit")
+    kb.button(text=i18n.get("nav-back"), callback_data="act:edit")
     kb.adjust(2)
     return kb.as_markup()
 
 
-def estimate_keyboard() -> InlineKeyboardMarkup:
+def estimate_keyboard(i18n) -> InlineKeyboardMarkup:
     kb = InlineKeyboardBuilder()
     for value in ESTIMATES:
         kb.button(text=str(value), callback_data=f"es:{value}")
-    kb.button(text="✖ Снять", callback_data="es:none")
-    kb.button(text="⬅️ Назад", callback_data="act:edit")
+    kb.button(text=i18n.get("btn-clear"), callback_data="es:none")
+    kb.button(text=i18n.get("nav-back"), callback_data="act:edit")
     kb.adjust(3)
     return kb.as_markup()
 
 
-def due_keyboard() -> InlineKeyboardMarkup:
+def due_keyboard(i18n) -> InlineKeyboardMarkup:
     kb = InlineKeyboardBuilder()
-    kb.button(text="Сегодня", callback_data="du:0")
-    kb.button(text="Завтра", callback_data="du:1")
-    kb.button(text="+3 дня", callback_data="du:3")
-    kb.button(text="+7 дней", callback_data="du:7")
-    kb.button(text="📅 Ввести дату", callback_data="du:custom")
-    kb.button(text="✖ Снять", callback_data="du:none")
-    kb.button(text="⬅️ Назад", callback_data="act:edit")
+    kb.button(text=i18n.get("due-today"), callback_data="du:0")
+    kb.button(text=i18n.get("due-tomorrow"), callback_data="du:1")
+    kb.button(text=i18n.get("due-3d"), callback_data="du:3")
+    kb.button(text=i18n.get("due-7d"), callback_data="du:7")
+    kb.button(text=i18n.get("due-custom-btn"), callback_data="du:custom")
+    kb.button(text=i18n.get("btn-clear"), callback_data="du:none")
+    kb.button(text=i18n.get("nav-back"), callback_data="act:edit")
     kb.adjust(2)
     return kb.as_markup()
 
 
-def labels_keyboard(labels: list[dict], selected: set[str]) -> InlineKeyboardMarkup:
+def labels_keyboard(i18n, labels: list[dict], selected: set[str]) -> InlineKeyboardMarkup:
     """Owner labels (prefix tg:) are managed via Assign, so hidden here."""
     kb = InlineKeyboardBuilder()
     for lb in labels:
@@ -144,6 +146,6 @@ def labels_keyboard(labels: list[dict], selected: set[str]) -> InlineKeyboardMar
             continue
         mark = "☑️ " if lb["id"] in selected else "▫️ "
         kb.button(text=mark + lb["name"], callback_data=f"lb:{lb['id']}")
-    kb.button(text="✅ Готово", callback_data="act:refresh")
+    kb.button(text=i18n.get("btn-done"), callback_data="act:refresh")
     kb.adjust(2)
     return kb.as_markup()
