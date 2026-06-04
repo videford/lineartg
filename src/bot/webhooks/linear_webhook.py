@@ -1,0 +1,93 @@
+from __future__ import annotations
+
+import hashlib
+import hmac
+import json
+import logging
+
+from aiohttp import web
+from sqlalchemy import select
+
+from bot.config import settings
+from bot.db import IssueLink, WebhookDedup
+from bot.db.session import session_factory
+
+log = logging.getLogger(__name__)
+
+
+def _verify_signature(raw_body: bytes, signature: str | None) -> bool:
+    if not settings.linear_webhook_secret:
+        return True  # not configured (dev) — skip
+    if not signature:
+        return False
+    digest = hmac.new(
+        settings.linear_webhook_secret.encode(), raw_body, hashlib.sha256
+    ).hexdigest()
+    return hmac.compare_digest(digest, signature)
+
+
+async def linear_webhook(request: web.Request) -> web.Response:
+    """Handles Linear data-change events and forwards relevant ones to Telegram.
+
+    Routing relies on IssueLink: an event about an issue we created from
+    Telegram is echoed back into the originating chat."""
+    raw = await request.read()
+    if not _verify_signature(raw, request.headers.get("Linear-Signature")):
+        return web.Response(status=401, text="bad signature")
+
+    payload = json.loads(raw)
+    delivery_id = str(payload.get("webhookId", "")) + str(payload.get("createdAt", ""))
+
+    async with session_factory() as session:
+        # Idempotency: drop duplicate deliveries.
+        if delivery_id:
+            if await session.get(WebhookDedup, delivery_id):
+                return web.Response(text="dup")
+            session.add(WebhookDedup(delivery_id=delivery_id))
+            await session.commit()
+
+        bot = request.app["bot"]
+        i18n = request.app["i18n_core"]
+        await _route_event(session, bot, i18n, payload)
+
+    return web.Response(text="ok")
+
+
+async def _route_event(session, bot, i18n, payload: dict) -> None:
+    action = payload.get("action")
+    entity_type = payload.get("type")
+    data = payload.get("data", {})
+
+    issue_id = data.get("issueId") if entity_type == "Comment" else data.get("id")
+    if not issue_id:
+        return
+
+    links = await session.scalars(
+        select(IssueLink).where(IssueLink.linear_issue_id == issue_id)
+    )
+    links = list(links)
+    if not links:
+        return
+
+    if entity_type == "Comment" and action == "create":
+        body = data.get("body", "")
+        user = (data.get("user") or {}).get("name", "Linear")
+        text = i18n.get("notify-comment", locale=settings.default_lang, user=user, body=body)
+    elif entity_type == "Issue" and action == "update":
+        state = (data.get("state") or {}).get("name", "?")
+        ident = data.get("identifier", "")
+        text = i18n.get("notify-status", locale=settings.default_lang, identifier=ident, state=state)
+    else:
+        return
+
+    seen_chats: set[int] = set()
+    for link in links:
+        if link.telegram_chat_id in seen_chats:
+            continue
+        seen_chats.add(link.telegram_chat_id)
+        try:
+            await bot.send_message(
+                link.telegram_chat_id, text, reply_to_message_id=link.telegram_message_id
+            )
+        except Exception:  # noqa: BLE001
+            log.warning("failed to deliver Linear event to %s", link.telegram_chat_id)
