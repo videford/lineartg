@@ -7,7 +7,7 @@ from __future__ import annotations
 import logging
 
 from aiogram import F, Router
-from aiogram.filters import Command, StateFilter
+from aiogram.filters import Command
 from aiogram.fsm.context import FSMContext
 from aiogram.types import CallbackQuery, Message
 from aiogram_i18n import I18nContext
@@ -60,50 +60,65 @@ async def show_menu(message: Message, user: User, session: AsyncSession, i18n: I
 
 
 @router.message(Command("menu"))
-async def cmd_menu(message: Message, user: User, session: AsyncSession, i18n: I18nContext) -> None:
+async def cmd_menu(
+    message: Message, user: User, session: AsyncSession, state: FSMContext, i18n: I18nContext
+) -> None:
+    await state.clear()  # /menu also escapes any half-finished flow
     await show_menu(message, user, session, i18n)
 
 
-# ── top-level buttons (only when not mid-flow) ───────────────
+# ── top-level buttons ────────────────────────────────────────
+# No state filter: menu buttons work anytime and reset any half-finished flow
+# (a stuck FSM state must never lock the user out). Active text-input flows
+# live in earlier routers, so legitimate input is still caught there first.
 
 
-@router.message(StateFilter(None), F.text.startswith(EMOJI_MY))
-async def btn_my(message: Message, user: User, session: AsyncSession, i18n: I18nContext) -> None:
+@router.message(F.text.startswith(EMOJI_MY))
+async def btn_my(
+    message: Message, user: User, session: AsyncSession, state: FSMContext, i18n: I18nContext
+) -> None:
+    await state.clear()
     await my_h.cmd_my(message, user, session, i18n)
 
 
-@router.message(StateFilter(None), F.text.startswith(EMOJI_CREATE))
+@router.message(F.text.startswith(EMOJI_CREATE))
 async def btn_create(
     message: Message, user: User, session: AsyncSession, state: FSMContext, i18n: I18nContext
 ) -> None:
+    await state.clear()
     await tasks_h.cmd_task(message, user, session, state, i18n)
 
 
-@router.message(StateFilter(None), F.text.startswith(EMOJI_ASSIGN))
+@router.message(F.text.startswith(EMOJI_ASSIGN))
 async def btn_assign(
     message: Message, user: User, session: AsyncSession, state: FSMContext, i18n: I18nContext
 ) -> None:
+    await state.clear()
     await assign_h.cmd_assign(message, user, session, state, i18n)
 
 
-@router.message(StateFilter(None), F.text.startswith(EMOJI_SEARCH))
+@router.message(F.text.startswith(EMOJI_SEARCH))
 async def btn_search(message: Message, state: FSMContext, i18n: I18nContext) -> None:
+    await state.clear()
     await state.set_state(Search.waiting_query)
     await message.answer(i18n.get("search-prompt"))
 
 
-@router.message(StateFilter(None), F.text.startswith(EMOJI_SETTINGS))
-async def btn_settings(message: Message, i18n: I18nContext) -> None:
+@router.message(F.text.startswith(EMOJI_SETTINGS))
+async def btn_settings(message: Message, state: FSMContext, i18n: I18nContext) -> None:
+    await state.clear()
     await message.answer(i18n.get("settings-title"), reply_markup=settings_menu(i18n))
 
 
-@router.message(StateFilter(None), F.text.startswith(EMOJI_HELP))
-async def btn_help(message: Message, user: User, i18n: I18nContext) -> None:
+@router.message(F.text.startswith(EMOJI_HELP))
+async def btn_help(message: Message, user: User, state: FSMContext, i18n: I18nContext) -> None:
+    await state.clear()
     await message.answer(i18n.get("help-body", role=user.role.value))
 
 
-@router.message(StateFilter(None), F.text.startswith(EMOJI_ADMIN))
-async def btn_admin(message: Message, user: User, i18n: I18nContext) -> None:
+@router.message(F.text.startswith(EMOJI_ADMIN))
+async def btn_admin(message: Message, user: User, state: FSMContext, i18n: I18nContext) -> None:
+    await state.clear()
     if not can(user.role, Action.MANAGE_LEADS):
         await message.answer(i18n.get("err-no-permission"))
         return
@@ -201,15 +216,17 @@ async def adm_leads(call: CallbackQuery, user: User, session: AsyncSession, i18n
 # ── fallbacks (registered LAST so specific handlers win) ─────
 
 
-@router.message(StateFilter(None))
+@router.message()
 async def fallback_message(
-    message: Message, user: User, session: AsyncSession, i18n: I18nContext
+    message: Message, user: User, session: AsyncSession, state: FSMContext, i18n: I18nContext
 ) -> None:
-    """Any idle message that matched nothing — guide the user to the menu so the
-    bot always responds instead of silently dropping the update."""
-    log.info("fallback: unhandled idle message from %s: %r", user.telegram_id, message.text)
+    """Last-resort handler: any message not caught by a command, a menu button,
+    or an active text-input flow (those live in earlier routers). Resets a
+    possibly-stuck flow and shows the menu so the bot always responds."""
+    log.info("fallback: unhandled message from %s: %r", user.telegram_id, message.text)
     if message.chat.type != "private":
         return  # stay quiet in groups to avoid noise
+    await state.clear()
     await show_menu(message, user, session, i18n)
 
 

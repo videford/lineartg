@@ -29,6 +29,7 @@ async def cmd_start(
     state: FSMContext,
     i18n: I18nContext,
 ) -> None:
+    await state.clear()  # escape any half-finished flow on /start
     # First contact (or not yet registered): collect the real first/last name.
     if not user.registered:
         await state.set_state(Registration.waiting_full_name)
