@@ -97,6 +97,13 @@ menu-settings = ⚙️ Settings
 menu-help = ❓ Help
 menu-admin = 🛠 Manage
 menu-projects = 📂 Projects
+menu-browse = 🗂 Tasks
+
+# browse all tasks
+browse-no-projects = Projects aren't loaded yet. Contact an admin.
+browse-choose-project = Choose a project to view its tasks:
+browse-empty = This project has no tasks.
+browse-list = Project tasks:
 
 # project team management
 team-no-projects = You have no projects to manage a team for.

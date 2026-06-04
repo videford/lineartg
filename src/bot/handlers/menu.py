@@ -17,11 +17,13 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from bot.db import User
 from bot.handlers import admin as admin_h
 from bot.handlers import assign as assign_h
+from bot.handlers import browse as browse_h
 from bot.handlers import my as my_h
 from bot.handlers import team as team_h
 from bot.keyboards.inline import open_card_button
 from bot.keyboards.menu import (
     EMOJI_ADMIN,
+    EMOJI_BROWSE,
     EMOJI_CREATE,
     EMOJI_MY,
     EMOJI_PROJECTS,
@@ -89,6 +91,14 @@ async def btn_create(
     # Creating a task always goes through assignment — no orphan tasks.
     await state.clear()
     await assign_h.cmd_assign(message, user, session, state, i18n)
+
+
+@router.message(F.text.startswith(EMOJI_BROWSE))
+async def btn_browse(
+    message: Message, user: User, session: AsyncSession, state: FSMContext, i18n: I18nContext
+) -> None:
+    await state.clear()
+    await browse_h.cmd_browse(message, user, session, state, i18n)
 
 
 @router.message(F.text.startswith(EMOJI_SEARCH))

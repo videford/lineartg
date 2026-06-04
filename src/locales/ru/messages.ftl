@@ -97,6 +97,13 @@ menu-settings = ⚙️ Настройки
 menu-help = ❓ Помощь
 menu-admin = 🛠 Управление
 menu-projects = 📂 Проекты
+menu-browse = 🗂 Задачи
+
+# browse all tasks
+browse-no-projects = Проекты ещё не загружены. Обратитесь к администратору.
+browse-choose-project = Выберите проект, чтобы посмотреть задачи:
+browse-empty = В этом проекте нет задач.
+browse-list = Задачи проекта:
 
 # project team management
 team-no-projects = У вас нет проектов для управления командой.

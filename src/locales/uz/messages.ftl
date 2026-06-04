@@ -97,6 +97,13 @@ menu-settings = ⚙️ Sozlamalar
 menu-help = ❓ Yordam
 menu-admin = 🛠 Boshqaruv
 menu-projects = 📂 Loyihalar
+menu-browse = 🗂 Vazifalar
+
+# browse all tasks
+browse-no-projects = Loyihalar hali yuklanmagan. Administratorga murojaat qiling.
+browse-choose-project = Vazifalarni koʻrish uchun loyihani tanlang:
+browse-empty = Bu loyihada vazifalar yoʻq.
+browse-list = Loyiha vazifalari:
 
 # project team management
 team-no-projects = Jamoasini boshqarish uchun loyihangiz yoʻq.

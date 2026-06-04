@@ -103,6 +103,11 @@ class LinearClient:
         data = await self._execute(queries.ISSUE_SEARCH, {"term": term})
         return data["issues"]["nodes"]
 
+    async def issues_by_project(self, project_id: str) -> list[dict]:
+        data = await self._execute(queries.ISSUES_BY_PROJECT, {"projectId": project_id})
+        project = data.get("project") or {}
+        return (project.get("issues") or {}).get("nodes", [])
+
     async def get_issue(self, issue_id: str) -> dict | None:
         data = await self._execute(queries.ISSUE_DETAIL, {"id": issue_id})
         return data.get("issue")

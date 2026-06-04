@@ -15,6 +15,8 @@ KEYS = [
     "assign-no-team", "assign-not-in-team",
     "nav-back", "nav-close",
     "sub-on", "sub-off", "sub-other-done", "sub-added-dm",
+    "menu-browse", "browse-no-projects", "browse-choose-project",
+    "browse-empty", "browse-list",
 ]
 ARGS = {
     "start-welcome": {"name": "X", "status": "Y"},

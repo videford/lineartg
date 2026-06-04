@@ -28,7 +28,7 @@ from bot.keyboards.inline import (
 )
 from bot.linear import LinearClient
 from bot.services import workspace
-from bot.services.permissions import can_comment, can_manage_task, is_owner_of
+from bot.services.permissions import can_manage_task
 from bot.services.projects import is_project_team, project_team
 from bot.services.subscriptions import is_subscribed, subscribe, unsubscribe
 from bot.services.users import OWNER_PREFIX
@@ -103,13 +103,7 @@ async def _render(
 
     project_id = (issue.get("project") or {}).get("id")
     manage = await can_manage_task(session, user, project_id)
-    comment = await can_comment(session, user, project_id, _owner_labels(issue))
-
-    if not (manage or comment):
-        # Not the owner, not a manager — cannot view this card.
-        target = call.message if call else message
-        await target.answer(i18n.get("err-no-permission"))
-        return
+    # Anyone can view a card, comment and subscribe; only managers edit/status/assign.
 
     await state.set_data(
         {
@@ -123,7 +117,7 @@ async def _render(
     subscribed = await is_subscribed(session, user.telegram_id, issue_id)
     text = _format_card(issue)
     kb = card_keyboard(
-        issue["url"], can_manage=manage, can_comment=comment, subscribed=subscribed
+        issue["url"], can_manage=manage, can_comment=True, subscribed=subscribed
     )
     if call is not None:
         try:
@@ -491,15 +485,11 @@ async def subscribe_other(
 async def start_comment(
     call: CallbackQuery, user: User, session: AsyncSession, state: FSMContext, i18n: I18nContext
 ) -> None:
-    issue_id, _, project_id = await _active(state)
+    issue_id, _, _ = await _active(state)
     if not issue_id:
         await call.answer()
         return
-    client = await workspace.get_client(session)
-    issue = await client.get_issue(issue_id)
-    if not await can_comment(session, user, project_id, _owner_labels(issue)):
-        await call.answer(i18n.get("err-no-permission"), show_alert=True)
-        return
+    # Anyone can comment.
     await state.set_state(Card.waiting_comment)
     await call.message.answer(i18n.get("comment-prompt"))
     await call.answer()
@@ -509,14 +499,10 @@ async def start_comment(
 async def comment_received(
     message: Message, user: User, session: AsyncSession, state: FSMContext, i18n: I18nContext
 ) -> None:
-    issue_id, _, project_id = await _active(state)
+    issue_id, _, _ = await _active(state)
     if not issue_id:
         return
     client = await workspace.get_client(session)
-    issue = await client.get_issue(issue_id)
-    if not await can_comment(session, user, project_id, _owner_labels(issue)):
-        await message.answer(i18n.get("err-no-permission"))
-        return
     await client.create_comment(
         issue_id=issue_id,
         body=message.text or "",

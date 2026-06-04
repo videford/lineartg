@@ -1,0 +1,59 @@
+"""Browse all tasks by project — available to everyone. Any user can open a
+card, read it, comment and subscribe (edit/status/assign stay manager-only).
+"""
+from __future__ import annotations
+
+from aiogram import F, Router
+from aiogram.fsm.context import FSMContext
+from aiogram.types import CallbackQuery, Message
+from aiogram_i18n import I18nContext
+from sqlalchemy.ext.asyncio import AsyncSession
+
+from bot.db import User
+from bot.keyboards.inline import open_card_button, projects_keyboard
+from bot.services import workspace
+from bot.services.projects import list_projects
+
+router = Router(name="browse")
+
+
+async def cmd_browse(
+    message: Message, user: User, session: AsyncSession, state: FSMContext, i18n: I18nContext
+) -> None:
+    try:
+        await workspace.get_token(session)
+    except workspace.WorkspaceNotConnected:
+        await message.answer(i18n.get("err-no-workspace"))
+        return
+    projects = await list_projects(session)
+    if not projects:
+        await message.answer(i18n.get("browse-no-projects"))
+        return
+    await message.answer(
+        i18n.get("browse-choose-project"),
+        reply_markup=projects_keyboard(projects, prefix="brproj"),
+    )
+
+
+@router.callback_query(F.data.startswith("brproj:"))
+async def browse_project(
+    call: CallbackQuery, session: AsyncSession, i18n: I18nContext
+) -> None:
+    project_id = call.data.split(":", 1)[1]
+    client = await workspace.get_client(session)
+    issues = await client.issues_by_project(project_id)
+    if not issues:
+        await call.message.edit_text(i18n.get("browse-empty"))
+        await call.answer()
+        return
+    await call.message.edit_text(i18n.get("browse-list"))
+    for issue in issues:
+        text = i18n.get(
+            "my-issue-line",
+            identifier=issue["identifier"],
+            title=issue["title"],
+            state=issue["state"]["name"],
+            project=(issue.get("project") or {}).get("name", "—"),
+        )
+        await call.message.answer(text, reply_markup=open_card_button(issue["id"]))
+    await call.answer()
