@@ -160,6 +160,7 @@ board-free = 🆓 Ijrochisiz
 board-open = 📋 Barcha ochiq
 board-empty = Hech narsa yoʻq.
 board-more = …va yana { $n } ta. Toʻliq roʻyxat uchun botni shaxsiy chatda oching.
+board-bind-first = Bu guruh bogʻlanmagan. Admin kerakli mavzuda /bind bajarishi kerak.
 
 # people directory
 people-title = Kompaniya aʼzolari ({ $n }):

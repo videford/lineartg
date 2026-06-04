@@ -174,13 +174,15 @@ async def _render(
         i18n, issue["url"], can_manage=manage, can_comment=True,
         subscribed=subscribed, is_owner=is_owner,
     )
+    target = call.message if call is not None else message
+    silent = target.chat.type != "private"  # don't ping the whole group
     if call is not None:
         try:
             await call.message.edit_text(text, reply_markup=kb)
         except Exception:  # noqa: BLE001 — message unchanged / not editable
-            await call.message.answer(text, reply_markup=kb)
+            await call.message.answer(text, reply_markup=kb, disable_notification=silent)
     else:
-        await message.answer(text, reply_markup=kb)
+        await message.answer(text, reply_markup=kb, disable_notification=silent)
 
 
 async def open_issue_card(

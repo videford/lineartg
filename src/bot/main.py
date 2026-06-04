@@ -15,7 +15,7 @@ from aiohttp import web
 
 from bot.config import settings
 from bot.handlers import build_router
-from bot.middlewares import DbSessionMiddleware, UserLocaleManager
+from bot.middlewares import DbSessionMiddleware, RegistrationGate, UserLocaleManager
 from bot.webhooks import linear_webhook, oauth_callback
 
 LOCALES_PATH = Path(__file__).resolve().parents[1] / "locales" / "{locale}"
@@ -28,6 +28,11 @@ def build_dispatcher(i18n_core: FluentRuntimeCore) -> Dispatcher:
     db_mw = DbSessionMiddleware()
     dp.message.middleware(db_mw)
     dp.callback_query.middleware(db_mw)
+
+    # Registration gate runs after the user is loaded.
+    gate = RegistrationGate()
+    dp.message.middleware(gate)
+    dp.callback_query.middleware(gate)
 
     I18nMiddleware(
         core=i18n_core,

@@ -160,6 +160,7 @@ board-free = 🆓 Без исполнителя
 board-open = 📋 Все открытые
 board-empty = Ничего нет.
 board-more = …и ещё { $n }. Откройте бот в личке для полного списка.
+board-bind-first = Эта группа не привязана. Админу нужно выполнить /bind в нужном топике.
 
 # people directory
 people-title = Участники компании ({ $n }):

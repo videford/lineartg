@@ -160,6 +160,7 @@ board-free = 🆓 Unassigned
 board-open = 📋 All open
 board-empty = Nothing here.
 board-more = …and { $n } more. Open the bot DM for the full list.
+board-bind-first = This group isn't bound. An admin must run /bind in the desired topic.
 
 # people directory
 people-title = Company members ({ $n }):

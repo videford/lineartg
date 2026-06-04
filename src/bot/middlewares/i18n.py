@@ -23,6 +23,12 @@ class UserLocaleManager(BaseManager):
     async def get_locale(
         self, event_from_user: TelegramObject | None = None, **kwargs: Any
     ) -> str:
+        # Group chats always use English (a shared lingua franca); DMs use the
+        # user's chosen language.
+        chat = kwargs.get("event_chat")
+        if chat is not None and getattr(chat, "type", "private") != "private":
+            return "en"
+
         user: User | None = kwargs.get("user")
         if user is not None and user.lang in SUPPORTED_LOCALES:
             return user.lang
