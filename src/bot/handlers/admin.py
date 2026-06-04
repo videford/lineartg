@@ -61,10 +61,9 @@ async def cmd_bind(
     binding.title = message.chat.title
     binding.thread_id = thread_id
     await session.commit()
-    await message.answer(
-        i18n.get("bind-ok-topic") if thread_id else i18n.get("bind-ok"),
-        message_thread_id=thread_id,
-    )
+    # message.answer already keeps the reply in the source topic — don't pass
+    # message_thread_id again (aiogram would raise "multiple values").
+    await message.answer(i18n.get("bind-ok-topic") if thread_id else i18n.get("bind-ok"))
 
 
 @router.message(Command("setrole"))

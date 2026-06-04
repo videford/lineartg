@@ -178,13 +178,9 @@ async def _render(
         try:
             await call.message.edit_text(text, reply_markup=kb)
         except Exception:  # noqa: BLE001 — message unchanged / not editable
-            await call.message.answer(
-                text, reply_markup=kb, message_thread_id=call.message.message_thread_id
-            )
+            await call.message.answer(text, reply_markup=kb)
     else:
-        await message.answer(
-            text, reply_markup=kb, message_thread_id=message.message_thread_id
-        )
+        await message.answer(text, reply_markup=kb)
 
 
 async def open_issue_card(

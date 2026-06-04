@@ -80,11 +80,7 @@ async def cmd_board(message: Message, session: AsyncSession, i18n: I18nContext) 
             and message.message_thread_id != binding.thread_id
         ):
             return
-    await message.answer(
-        i18n.get("board-title"),
-        reply_markup=_kb(i18n),
-        message_thread_id=message.message_thread_id,
-    )
+    await message.answer(i18n.get("board-title"), reply_markup=_kb(i18n))
 
 
 async def _label_map(session: AsyncSession) -> dict[str, str]:
