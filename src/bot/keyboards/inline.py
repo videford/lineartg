@@ -34,11 +34,15 @@ def projects_keyboard(projects: list, prefix: str = "proj") -> InlineKeyboardMar
     return kb.as_markup()
 
 
-def members_keyboard(members: list, prefix: str = "asgn") -> InlineKeyboardMarkup:
+def members_keyboard(
+    members: list, prefix: str = "asgn", back: str | None = None
+) -> InlineKeyboardMarkup:
     kb = InlineKeyboardBuilder()
     for m in members:
         kb.button(text=m.display_name, callback_data=f"{prefix}:{m.telegram_id}")
     kb.adjust(2)
+    if back:
+        kb.row(InlineKeyboardButton(text="⬅️ Назад", callback_data=back))
     return kb.as_markup()
 
 
@@ -125,6 +129,7 @@ def due_keyboard() -> InlineKeyboardMarkup:
     kb.button(text="Завтра", callback_data="du:1")
     kb.button(text="+3 дня", callback_data="du:3")
     kb.button(text="+7 дней", callback_data="du:7")
+    kb.button(text="📅 Ввести дату", callback_data="du:custom")
     kb.button(text="✖ Снять", callback_data="du:none")
     kb.button(text="⬅️ Назад", callback_data="act:edit")
     kb.adjust(2)

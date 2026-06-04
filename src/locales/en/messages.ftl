@@ -45,6 +45,18 @@ assigned-dm = 📌 You've been assigned task { $identifier }: { $title } (by { $
 assign-no-team = This project has no team members yet. Add them via 📂 Projects.
 assign-not-in-team = This user is not part of the project team.
 
+my-title = My tasks
+search-results = Search results
+list-count = total: { $n }
+list-empty = No tasks for this filter.
+list-f-all = All
+list-f-todo = Todo
+list-f-inprogress = In Progress
+list-f-done = Done
+list-f-backlog = Backlog
+list-prev = ◀
+list-next = ▶
+list-page = { $page }/{ $total }
 my-no-label = Your profile isn't linked yet. Run /start.
 my-empty = You have no active tasks.
 my-issue-line = { $identifier } · { $title }
@@ -66,11 +78,20 @@ notify-status = 🔁 { $identifier } → { $state }
 
 # task card
 card-not-found = Issue not found.
+card-f-status = Status
+card-f-priority = Priority
+card-f-project = Project
+card-f-assignee = Assignee
+card-f-due = Due
+card-f-estimate = Estimate
+card-f-labels = Labels
 sub-on = 🔔 Subscribed
 sub-off = 🔕 Unsubscribed
 sub-other-done = Subscribed: { $name }
 sub-added-dm = 🔔 You were subscribed to task { $identifier } (by { $by })
 toast-saved = Saved
+due-prompt = Send a date as YYYY-MM-DD or DD.MM.YYYY (e.g. 2026-06-30).
+due-invalid = Couldn't parse the date. Use YYYY-MM-DD or DD.MM.YYYY.
 edit-send-title = Send the new title.
 edit-send-desc = Send the new description.
 

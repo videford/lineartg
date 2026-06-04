@@ -100,7 +100,7 @@ query IssueDetail($id: String!) {
     assignee { name }
     labels(first: 50) { nodes { id name } }
     comments(last: 3) {
-      nodes { body user { name } createdAt }
+      nodes { body user { name } botActor { userDisplayName } createdAt }
     }
   }
 }
@@ -133,7 +133,9 @@ query IssuesByProject($projectId: String!) {
         identifier
         title
         url
-        state { name }
+        priority
+        priorityLabel
+        state { name type }
         project { name }
       }
     }
@@ -153,7 +155,9 @@ query IssueSearch($term: String!) {
       identifier
       title
       url
-      state { name }
+      priority
+      priorityLabel
+      state { name type }
       project { name }
     }
   }
@@ -173,6 +177,8 @@ query IssuesByLabel($label: String!) {
       identifier
       title
       url
+      priority
+      priorityLabel
       state { name type }
       project { name }
     }

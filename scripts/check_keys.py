@@ -17,6 +17,12 @@ KEYS = [
     "sub-on", "sub-off", "sub-other-done", "sub-added-dm",
     "menu-browse", "browse-no-projects", "browse-choose-project",
     "browse-empty", "browse-list",
+    "card-f-status", "card-f-priority", "card-f-project", "card-f-assignee",
+    "card-f-due", "card-f-estimate", "card-f-labels",
+    "due-prompt", "due-invalid",
+    "my-title", "search-results", "list-count", "list-empty",
+    "list-f-all", "list-f-todo", "list-f-inprogress", "list-f-done", "list-f-backlog",
+    "list-prev", "list-next", "list-page",
 ]
 ARGS = {
     "start-welcome": {"name": "X", "status": "Y"},
@@ -27,6 +33,8 @@ ARGS = {
     "team-view": {"project": "P", "members": "M"},
     "sub-other-done": {"name": "X"},
     "sub-added-dm": {"identifier": "FLO-1", "by": "Y"},
+    "list-count": {"n": 3},
+    "list-page": {"page": 1, "total": 2},
 }
 
 core = FluentRuntimeCore(path=str(LOCALES_PATH))

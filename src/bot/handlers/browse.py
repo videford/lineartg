@@ -9,10 +9,13 @@ from aiogram.types import CallbackQuery, Message
 from aiogram_i18n import I18nContext
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from aiogram.fsm.context import FSMContext
+
 from bot.db import User
-from bot.keyboards.inline import open_card_button, projects_keyboard
+from bot.handlers import tasklist
+from bot.keyboards.inline import projects_keyboard
 from bot.services import workspace
-from bot.services.projects import list_projects
+from bot.services.projects import get_project, list_projects
 
 router = Router(name="browse")
 
@@ -37,23 +40,12 @@ async def cmd_browse(
 
 @router.callback_query(F.data.startswith("brproj:"))
 async def browse_project(
-    call: CallbackQuery, session: AsyncSession, i18n: I18nContext
+    call: CallbackQuery, session: AsyncSession, state: FSMContext, i18n: I18nContext
 ) -> None:
     project_id = call.data.split(":", 1)[1]
     client = await workspace.get_client(session)
     issues = await client.issues_by_project(project_id)
-    if not issues:
-        await call.message.edit_text(i18n.get("browse-empty"))
-        await call.answer()
-        return
-    await call.message.edit_text(i18n.get("browse-list"))
-    for issue in issues:
-        text = i18n.get(
-            "my-issue-line",
-            identifier=issue["identifier"],
-            title=issue["title"],
-            state=issue["state"]["name"],
-            project=(issue.get("project") or {}).get("name", "—"),
-        )
-        await call.message.answer(text, reply_markup=open_card_button(issue["id"]))
+    project = await get_project(session, project_id)
+    title = project.name if project else i18n.get("menu-browse")
+    await tasklist.show_list(call.message, state=state, i18n=i18n, title=title, issues=issues)
     await call.answer()

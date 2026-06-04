@@ -45,6 +45,18 @@ assigned-dm = 📌 Вам назначена задача { $identifier }: { $ti
 assign-no-team = В этом проекте пока нет участников. Добавьте их через 📂 Проекты.
 assign-not-in-team = Этот пользователь не входит в команду проекта.
 
+my-title = Мои задачи
+search-results = Результаты поиска
+list-count = всего: { $n }
+list-empty = Нет задач по этому фильтру.
+list-f-all = Все
+list-f-todo = К выполнению
+list-f-inprogress = В работе
+list-f-done = Готово
+list-f-backlog = Бэклог
+list-prev = ◀
+list-next = ▶
+list-page = { $page }/{ $total }
 my-no-label = Ваш профиль ещё не привязан. Выполните /start.
 my-empty = У вас нет активных задач.
 my-issue-line = { $identifier } · { $title }
@@ -66,11 +78,20 @@ notify-status = 🔁 { $identifier } → { $state }
 
 # task card
 card-not-found = Задача не найдена.
+card-f-status = Статус
+card-f-priority = Приоритет
+card-f-project = Проект
+card-f-assignee = Исполнитель
+card-f-due = Дедлайн
+card-f-estimate = Оценка
+card-f-labels = Метки
 sub-on = 🔔 Вы подписаны
 sub-off = 🔕 Подписка отменена
 sub-other-done = Подписан: { $name }
 sub-added-dm = 🔔 Вас подписали на задачу { $identifier } (подписал: { $by })
 toast-saved = Сохранено
+due-prompt = Отправьте дату в формате ГГГГ-ММ-ДД или ДД.ММ.ГГГГ (например: 2026-06-30).
+due-invalid = Не понял дату. Формат: ГГГГ-ММ-ДД или ДД.ММ.ГГГГ.
 edit-send-title = Отправьте новый заголовок.
 edit-send-desc = Отправьте новое описание.
 

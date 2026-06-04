@@ -45,6 +45,18 @@ assigned-dm = 📌 Sizga vazifa biriktirildi { $identifier }: { $title } (birikt
 assign-no-team = Bu loyihada hali aʼzolar yoʻq. Ularni 📂 Loyihalar orqali qoʻshing.
 assign-not-in-team = Bu foydalanuvchi loyiha jamoasida emas.
 
+my-title = Mening vazifalarim
+search-results = Qidiruv natijalari
+list-count = jami: { $n }
+list-empty = Bu filtr boʻyicha vazifalar yoʻq.
+list-f-all = Hammasi
+list-f-todo = Bajariladi
+list-f-inprogress = Jarayonda
+list-f-done = Tayyor
+list-f-backlog = Backlog
+list-prev = ◀
+list-next = ▶
+list-page = { $page }/{ $total }
 my-no-label = Profilingiz hali bogʻlanmagan. /start ni bajaring.
 my-empty = Sizda faol vazifalar yoʻq.
 my-issue-line = { $identifier } · { $title }
@@ -66,11 +78,20 @@ notify-status = 🔁 { $identifier } → { $state }
 
 # task card
 card-not-found = Vazifa topilmadi.
+card-f-status = Holat
+card-f-priority = Muhimlik
+card-f-project = Loyiha
+card-f-assignee = Ijrochi
+card-f-due = Muddat
+card-f-estimate = Baho
+card-f-labels = Teglar
 sub-on = 🔔 Obuna boʻldingiz
 sub-off = 🔕 Obuna bekor qilindi
 sub-other-done = Obuna qilindi: { $name }
 sub-added-dm = 🔔 Sizni { $identifier } vazifasiga obuna qilishdi (kim: { $by })
 toast-saved = Saqlandi
+due-prompt = Sanani YYYY-MM-DD yoki DD.MM.YYYY koʻrinishida yuboring (masalan: 2026-06-30).
+due-invalid = Sana tushunarsiz. Format: YYYY-MM-DD yoki DD.MM.YYYY.
 edit-send-title = Yangi sarlavhani yuboring.
 edit-send-desc = Yangi tavsifni yuboring.
 

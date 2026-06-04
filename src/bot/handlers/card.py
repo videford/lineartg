@@ -7,12 +7,13 @@ limit. Action callbacks therefore carry only short secondary values.
 from __future__ import annotations
 
 import html
-from datetime import date, timedelta
+from datetime import date, datetime, timedelta
 
 from aiogram import Bot, F, Router
 from aiogram.fsm.context import FSMContext
 from aiogram.types import CallbackQuery, Message
 from aiogram_i18n import I18nContext
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from bot.db import User
@@ -48,8 +49,31 @@ def _owner_labels(issue: dict) -> list[str]:
     ]
 
 
-def _format_card(issue: dict) -> str:
-    owners = ", ".join(o[len(OWNER_PREFIX):] for o in _owner_labels(issue)) or "—"
+async def _resolve_owner_names(session: AsyncSession, issue: dict) -> list[str]:
+    """Map owner labels (tg:slug) to the assignees' real display names."""
+    labels = _owner_labels(issue)
+    if not labels:
+        return []
+    rows = {
+        u.linear_label: u.display_name
+        for u in await session.scalars(
+            select(User).where(User.linear_label.in_(labels))
+        )
+    }
+    # Fall back to the de-slugged label when no user matches.
+    return [rows.get(lb, lb[len(OWNER_PREFIX):].replace("-", " ").title()) for lb in labels]
+
+
+def _comment_author(c: dict) -> str:
+    user = c.get("user") or {}
+    if user.get("name"):
+        return user["name"]
+    bot_actor = c.get("botActor") or {}
+    return bot_actor.get("userDisplayName") or "—"
+
+
+def _format_card(issue: dict, owner_names: list[str], i18n: I18nContext) -> str:
+    assignee = ", ".join(owner_names) or "—"
     other_labels = [
         lb["name"]
         for lb in (issue.get("labels") or {}).get("nodes", [])
@@ -59,14 +83,18 @@ def _format_card(issue: dict) -> str:
     if len(desc) > 500:
         desc = desc[:500] + "…"
 
+    estimate = issue.get("estimate")
     lines = [
         f"<b>{html.escape(issue['identifier'])}</b> · {html.escape(issue['title'])}",
-        f"Статус: {issue['state']['name']} · Приоритет: {issue.get('priorityLabel') or '—'}",
-        f"Проект: {html.escape((issue.get('project') or {}).get('name', '—'))} · Owner: {html.escape(owners)}",
-        f"Дедлайн: {issue.get('dueDate') or '—'} · Оценка: {issue.get('estimate') if issue.get('estimate') is not None else '—'}",
+        f"{i18n.get('card-f-status')}: {issue['state']['name']} · "
+        f"{i18n.get('card-f-priority')}: {issue.get('priorityLabel') or '—'}",
+        f"{i18n.get('card-f-project')}: {html.escape((issue.get('project') or {}).get('name', '—'))} · "
+        f"{i18n.get('card-f-assignee')}: {html.escape(assignee)}",
+        f"{i18n.get('card-f-due')}: {issue.get('dueDate') or '—'} · "
+        f"{i18n.get('card-f-estimate')}: {estimate if estimate is not None else '—'}",
     ]
     if other_labels:
-        lines.append("Метки: " + ", ".join(html.escape(x) for x in other_labels))
+        lines.append(i18n.get("card-f-labels") + ": " + ", ".join(html.escape(x) for x in other_labels))
     if desc:
         lines.append("─────────")
         lines.append(html.escape(desc))
@@ -74,7 +102,7 @@ def _format_card(issue: dict) -> str:
     if comments:
         lines.append("─────────")
         for c in comments:
-            who = html.escape((c.get("user") or {}).get("name", "?"))
+            who = html.escape(_comment_author(c))
             body = html.escape((c.get("body") or "").strip())
             if len(body) > 200:
                 body = body[:200] + "…"
@@ -105,17 +133,17 @@ async def _render(
     manage = await can_manage_task(session, user, project_id)
     # Anyone can view a card, comment and subscribe; only managers edit/status/assign.
 
-    await state.set_data(
-        {
-            "card_issue": issue_id,
-            "card_team": (issue.get("team") or {}).get("id"),
-            "card_project": project_id,
-        }
+    # update_data (not set_data) so a list view's context survives opening a card.
+    await state.update_data(
+        card_issue=issue_id,
+        card_team=(issue.get("team") or {}).get("id"),
+        card_project=project_id,
     )
     await state.set_state(None)
 
     subscribed = await is_subscribed(session, user.telegram_id, issue_id)
-    text = _format_card(issue)
+    owner_names = await _resolve_owner_names(session, issue)
+    text = _format_card(issue, owner_names, i18n)
     kb = card_keyboard(
         issue["url"], can_manage=manage, can_comment=True, subscribed=subscribed
     )
@@ -126,6 +154,22 @@ async def _render(
             await call.message.answer(text, reply_markup=kb)
     else:
         await message.answer(text, reply_markup=kb)
+
+
+async def open_issue_card(
+    message: Message,
+    issue_id: str,
+    *,
+    user: User,
+    session: AsyncSession,
+    state: FSMContext,
+    i18n: I18nContext,
+) -> None:
+    """Public entry: render an issue card as a new message (used by the list)."""
+    await _render(
+        call=None, message=message, issue_id=issue_id, user=user,
+        session=session, state=state, i18n=i18n,
+    )
 
 
 async def _active(state: FSMContext) -> tuple[str | None, str | None, str | None]:
@@ -319,11 +363,44 @@ async def set_due(
     if not issue_id or not await _guard_manage(call, session, user, project_id, i18n):
         return
     raw = call.data.split(":", 1)[1]
+    if raw == "custom":
+        await state.set_state(Card.waiting_due)
+        await call.message.answer(i18n.get("due-prompt"))
+        await call.answer()
+        return
     value = None if raw == "none" else (date.today() + timedelta(days=int(raw))).isoformat()
     client = await workspace.get_client(session)
     await client.update_issue(issue_id, dueDate=value)
     await _render(call=call, message=None, issue_id=issue_id, user=user, session=session, state=state, i18n=i18n, client=client)
     await call.answer(i18n.get("toast-saved"))
+
+
+def _parse_date(text: str) -> str | None:
+    """Accepts YYYY-MM-DD or DD.MM.YYYY; returns ISO date string or None."""
+    text = (text or "").strip()
+    for fmt in ("%Y-%m-%d", "%d.%m.%Y", "%d.%m.%y"):
+        try:
+            return datetime.strptime(text, fmt).date().isoformat()
+        except ValueError:
+            continue
+    return None
+
+
+@router.message(Card.waiting_due)
+async def due_received(
+    message: Message, user: User, session: AsyncSession, state: FSMContext, i18n: I18nContext
+) -> None:
+    issue_id, _, project_id = await _active(state)
+    if not issue_id or not await can_manage_task(session, user, project_id):
+        await message.answer(i18n.get("err-no-permission"))
+        return
+    iso = _parse_date(message.text or "")
+    if iso is None:
+        await message.answer(i18n.get("due-invalid"))
+        return
+    client = await workspace.get_client(session)
+    await client.update_issue(issue_id, dueDate=iso)
+    await _render(call=None, message=message, issue_id=issue_id, user=user, session=session, state=state, i18n=i18n, client=client)
 
 
 # ── labels (multi-toggle) ────────────────────────────────────
@@ -379,7 +456,9 @@ async def show_assign(
     if not team:
         await call.answer(i18n.get("assign-no-team"), show_alert=True)
         return
-    await call.message.edit_reply_markup(reply_markup=members_keyboard(team, prefix="ra"))
+    await call.message.edit_reply_markup(
+        reply_markup=members_keyboard(team, prefix="ra", back="act:refresh")
+    )
     await call.answer()
 
 
@@ -443,7 +522,9 @@ async def subother_list(
     if not team:
         await call.answer(i18n.get("assign-no-team"), show_alert=True)
         return
-    await call.message.edit_reply_markup(reply_markup=members_keyboard(team, prefix="subu"))
+    await call.message.edit_reply_markup(
+        reply_markup=members_keyboard(team, prefix="subu", back="act:refresh")
+    )
     await call.answer()
 
 
@@ -503,9 +584,12 @@ async def comment_received(
     if not issue_id:
         return
     client = await workspace.get_client(session)
+    # Prefix the author so it's clear in Linear who wrote the comment, even when
+    # the workspace renders app-actor comments without an obvious user.
+    body = f"**{user.display_name}:** {(message.text or '').strip()}"
     await client.create_comment(
         issue_id=issue_id,
-        body=message.text or "",
+        body=body,
         actor_name=user.display_name,
         actor_icon=user.avatar_url,
     )

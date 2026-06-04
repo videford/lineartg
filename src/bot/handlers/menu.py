@@ -19,8 +19,8 @@ from bot.handlers import admin as admin_h
 from bot.handlers import assign as assign_h
 from bot.handlers import browse as browse_h
 from bot.handlers import my as my_h
+from bot.handlers import tasklist
 from bot.handlers import team as team_h
-from bot.keyboards.inline import open_card_button
 from bot.keyboards.menu import (
     EMOJI_ADMIN,
     EMOJI_BROWSE,
@@ -81,7 +81,7 @@ async def btn_my(
     message: Message, user: User, session: AsyncSession, state: FSMContext, i18n: I18nContext
 ) -> None:
     await state.clear()
-    await my_h.cmd_my(message, user, session, i18n)
+    await my_h.cmd_my(message, user, session, state, i18n)
 
 
 @router.message(F.text.startswith(EMOJI_CREATE))
@@ -152,15 +152,9 @@ async def search_received(
     if not results:
         await message.answer(i18n.get("search-empty"))
         return
-    for issue in results:
-        text = i18n.get(
-            "my-issue-line",
-            identifier=issue["identifier"],
-            title=issue["title"],
-            state=issue["state"]["name"],
-            project=(issue.get("project") or {}).get("name", "—"),
-        )
-        await message.answer(text, reply_markup=open_card_button(issue["id"]))
+    await tasklist.show_list(
+        message, state=state, i18n=i18n, title=i18n.get("search-results"), issues=results
+    )
 
 
 # ── settings submenu ─────────────────────────────────────────

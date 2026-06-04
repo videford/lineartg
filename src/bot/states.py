@@ -43,3 +43,4 @@ class Card(StatesGroup):
     waiting_desc = State()
     waiting_comment = State()
     waiting_labels = State()
+    waiting_due = State()
