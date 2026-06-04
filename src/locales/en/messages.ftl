@@ -66,6 +66,10 @@ notify-status = 🔁 { $identifier } → { $state }
 
 # task card
 card-not-found = Issue not found.
+sub-on = 🔔 Subscribed
+sub-off = 🔕 Unsubscribed
+sub-other-done = Subscribed: { $name }
+sub-added-dm = 🔔 You were subscribed to task { $identifier } (by { $by })
 toast-saved = Saved
 edit-send-title = Send the new title.
 edit-send-desc = Send the new description.
@@ -108,6 +112,8 @@ team-removed = Removed
 team-no-candidates = All registered users are already on the team.
 team-lead-hint = This is a project lead. Manage leads via 🛠 → Assign lead.
 
+nav-back = ⬅️ Back
+nav-close = ✖ Close
 settings-title = Settings:
 settings-language = 🌐 Language
 settings-profile = 👤 My profile

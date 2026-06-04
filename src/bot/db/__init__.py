@@ -7,6 +7,7 @@ from bot.db.models import (
     ProjectLead,
     ProjectMember,
     Role,
+    Subscription,
     User,
     WebhookDedup,
 )
@@ -20,6 +21,7 @@ __all__ = [
     "ProjectLead",
     "ProjectMember",
     "Role",
+    "Subscription",
     "User",
     "WebhookDedup",
 ]

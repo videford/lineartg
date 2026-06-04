@@ -66,6 +66,10 @@ notify-status = 🔁 { $identifier } → { $state }
 
 # task card
 card-not-found = Задача не найдена.
+sub-on = 🔔 Вы подписаны
+sub-off = 🔕 Подписка отменена
+sub-other-done = Подписан: { $name }
+sub-added-dm = 🔔 Вас подписали на задачу { $identifier } (подписал: { $by })
 toast-saved = Сохранено
 edit-send-title = Отправьте новый заголовок.
 edit-send-desc = Отправьте новое описание.
@@ -108,6 +112,8 @@ team-removed = Убран
 team-no-candidates = Все зарегистрированные пользователи уже в команде.
 team-lead-hint = Это лид проекта. Лидов меняют через 🛠 → Назначить лида.
 
+nav-back = ⬅️ Назад
+nav-close = ✖ Закрыть
 settings-title = Настройки:
 settings-language = 🌐 Язык
 settings-profile = 👤 Мой профиль

@@ -66,6 +66,10 @@ notify-status = 🔁 { $identifier } → { $state }
 
 # task card
 card-not-found = Vazifa topilmadi.
+sub-on = 🔔 Obuna boʻldingiz
+sub-off = 🔕 Obuna bekor qilindi
+sub-other-done = Obuna qilindi: { $name }
+sub-added-dm = 🔔 Sizni { $identifier } vazifasiga obuna qilishdi (kim: { $by })
 toast-saved = Saqlandi
 edit-send-title = Yangi sarlavhani yuboring.
 edit-send-desc = Yangi tavsifni yuboring.
@@ -108,6 +112,8 @@ team-removed = Olib tashlandi
 team-no-candidates = Barcha roʻyxatdan oʻtgan foydalanuvchilar allaqachon jamoada.
 team-lead-hint = Bu loyiha lideri. Liderlar 🛠 → Lider tayinlash orqali boshqariladi.
 
+nav-back = ⬅️ Orqaga
+nav-close = ✖ Yopish
 settings-title = Sozlamalar:
 settings-language = 🌐 Til
 settings-profile = 👤 Mening profilim

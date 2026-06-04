@@ -11,6 +11,7 @@ from sqlalchemy import select
 from bot.config import settings
 from bot.db import IssueLink, WebhookDedup
 from bot.db.session import session_factory
+from bot.services.subscriptions import subscriber_ids
 
 log = logging.getLogger(__name__)
 
@@ -62,13 +63,6 @@ async def _route_event(session, bot, i18n, payload: dict) -> None:
     if not issue_id:
         return
 
-    links = await session.scalars(
-        select(IssueLink).where(IssueLink.linear_issue_id == issue_id)
-    )
-    links = list(links)
-    if not links:
-        return
-
     if entity_type == "Comment" and action == "create":
         body = data.get("body", "")
         user = (data.get("user") or {}).get("name", "Linear")
@@ -81,6 +75,13 @@ async def _route_event(session, bot, i18n, payload: dict) -> None:
         return
 
     seen_chats: set[int] = set()
+
+    # 1) Echo into the chat(s) where the issue was created from.
+    links = list(
+        await session.scalars(
+            select(IssueLink).where(IssueLink.linear_issue_id == issue_id)
+        )
+    )
     for link in links:
         if link.telegram_chat_id in seen_chats:
             continue
@@ -91,3 +92,13 @@ async def _route_event(session, bot, i18n, payload: dict) -> None:
             )
         except Exception:  # noqa: BLE001
             log.warning("failed to deliver Linear event to %s", link.telegram_chat_id)
+
+    # 2) DM every subscriber of this issue (a private chat id == the user id).
+    for tg_id in await subscriber_ids(session, issue_id):
+        if tg_id in seen_chats:
+            continue
+        seen_chats.add(tg_id)
+        try:
+            await bot.send_message(tg_id, text)
+        except Exception:  # noqa: BLE001
+            log.warning("failed to deliver Linear event to subscriber %s", tg_id)

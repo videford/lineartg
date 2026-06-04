@@ -145,6 +145,22 @@ class IssueLink(Base, TimestampMixin):
     telegram_message_id: Mapped[int] = mapped_column(BigInteger)
 
 
+class Subscription(Base, TimestampMixin):
+    """A Telegram user subscribed to a Linear issue — receives DM updates when
+    the issue changes (status, comments). Self-subscribe or added by a lead/admin."""
+
+    __tablename__ = "subscriptions"
+    __table_args__ = (
+        UniqueConstraint("telegram_id", "linear_issue_id", name="uq_subscription"),
+    )
+
+    id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
+    telegram_id: Mapped[int] = mapped_column(
+        BigInteger, ForeignKey("users.telegram_id", ondelete="CASCADE"), index=True
+    )
+    linear_issue_id: Mapped[str] = mapped_column(String(64), index=True)
+
+
 class WebhookDedup(Base):
     """Idempotency guard for Linear webhook deliveries."""
 

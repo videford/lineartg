@@ -13,6 +13,8 @@ KEYS = [
     "team-add-choose", "team-back", "team-added", "team-removed",
     "team-no-candidates", "team-lead-hint",
     "assign-no-team", "assign-not-in-team",
+    "nav-back", "nav-close",
+    "sub-on", "sub-off", "sub-other-done", "sub-added-dm",
 ]
 ARGS = {
     "start-welcome": {"name": "X", "status": "Y"},
@@ -21,6 +23,8 @@ ARGS = {
     "profile-card": {"name": "X", "status": "Y"},
     "profile-name-updated": {"name": "X"},
     "team-view": {"project": "P", "members": "M"},
+    "sub-other-done": {"name": "X"},
+    "sub-added-dm": {"identifier": "FLO-1", "by": "Y"},
 }
 
 core = FluentRuntimeCore(path=str(LOCALES_PATH))

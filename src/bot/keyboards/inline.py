@@ -12,11 +12,13 @@ from aiogram.utils.keyboard import InlineKeyboardBuilder
 #   cmt:<issue_id>              -> start commenting
 
 
-def lang_keyboard() -> InlineKeyboardMarkup:
+def lang_keyboard(with_back: bool = False) -> InlineKeyboardMarkup:
     kb = InlineKeyboardBuilder()
     kb.button(text="🇷🇺 Русский", callback_data="lang:ru")
     kb.button(text="🇺🇿 Oʻzbek", callback_data="lang:uz")
     kb.button(text="🇬🇧 English", callback_data="lang:en")
+    if with_back:
+        kb.button(text="⬅️ Назад", callback_data="nav:settings")
     kb.adjust(1)
     return kb.as_markup()
 
@@ -55,7 +57,7 @@ def open_card_button(issue_id: str) -> InlineKeyboardMarkup:
 
 
 def card_keyboard(
-    url: str, *, can_manage: bool, can_comment: bool
+    url: str, *, can_manage: bool, can_comment: bool, subscribed: bool
 ) -> InlineKeyboardMarkup:
     kb = InlineKeyboardBuilder()
     if can_manage:
@@ -64,6 +66,12 @@ def card_keyboard(
         kb.button(text="👤 Назначить", callback_data="act:assign")
     if can_comment:
         kb.button(text="💬 Комментарий", callback_data="act:comment")
+    if subscribed:
+        kb.button(text="🔕 Отписаться", callback_data="act:subtoggle")
+    else:
+        kb.button(text="🔔 Подписаться", callback_data="act:subtoggle")
+    if can_manage:
+        kb.button(text="👁 Подписать", callback_data="act:subother")
     kb.button(text="🔄 Обновить", callback_data="act:refresh")
     kb.button(text="↗️ В Linear", url=url)
     kb.adjust(2)

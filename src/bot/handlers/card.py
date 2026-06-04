@@ -9,7 +9,7 @@ from __future__ import annotations
 import html
 from datetime import date, timedelta
 
-from aiogram import F, Router
+from aiogram import Bot, F, Router
 from aiogram.fsm.context import FSMContext
 from aiogram.types import CallbackQuery, Message
 from aiogram_i18n import I18nContext
@@ -30,6 +30,7 @@ from bot.linear import LinearClient
 from bot.services import workspace
 from bot.services.permissions import can_comment, can_manage_task, is_owner_of
 from bot.services.projects import is_project_team, project_team
+from bot.services.subscriptions import is_subscribed, subscribe, unsubscribe
 from bot.services.users import OWNER_PREFIX
 from bot.states import Card
 
@@ -119,8 +120,11 @@ async def _render(
     )
     await state.set_state(None)
 
+    subscribed = await is_subscribed(session, user.telegram_id, issue_id)
     text = _format_card(issue)
-    kb = card_keyboard(issue["url"], can_manage=manage, can_comment=comment)
+    kb = card_keyboard(
+        issue["url"], can_manage=manage, can_comment=comment, subscribed=subscribed
+    )
     if call is not None:
         try:
             await call.message.edit_text(text, reply_markup=kb)
@@ -411,6 +415,73 @@ async def reassign(
     await client.update_issue(issue_id, labelIds=[*kept, new_owner])
     await _render(call=call, message=None, issue_id=issue_id, user=user, session=session, state=state, i18n=i18n, client=client)
     await call.answer(i18n.get("toast-saved"))
+
+
+# ── subscriptions ────────────────────────────────────────────
+
+
+@router.callback_query(F.data == "act:subtoggle")
+async def toggle_subscription(
+    call: CallbackQuery, user: User, session: AsyncSession, state: FSMContext, i18n: I18nContext
+) -> None:
+    issue_id, _, _ = await _active(state)
+    if not issue_id:
+        await call.answer()
+        return
+    if await is_subscribed(session, user.telegram_id, issue_id):
+        await unsubscribe(session, user.telegram_id, issue_id)
+        toast = i18n.get("sub-off")
+    else:
+        await subscribe(session, user.telegram_id, issue_id)
+        toast = i18n.get("sub-on")
+    await _render(call=call, message=None, issue_id=issue_id, user=user, session=session, state=state, i18n=i18n)
+    await call.answer(toast)
+
+
+@router.callback_query(F.data == "act:subother")
+async def subother_list(
+    call: CallbackQuery, user: User, session: AsyncSession, state: FSMContext, i18n: I18nContext
+) -> None:
+    issue_id, _, project_id = await _active(state)
+    if not issue_id or not await _guard_manage(call, session, user, project_id, i18n):
+        return
+    team = await project_team(session, project_id)
+    if not team:
+        await call.answer(i18n.get("assign-no-team"), show_alert=True)
+        return
+    await call.message.edit_reply_markup(reply_markup=members_keyboard(team, prefix="subu"))
+    await call.answer()
+
+
+@router.callback_query(F.data.startswith("subu:"))
+async def subscribe_other(
+    call: CallbackQuery,
+    user: User,
+    session: AsyncSession,
+    state: FSMContext,
+    bot: Bot,
+    i18n: I18nContext,
+) -> None:
+    issue_id, _, project_id = await _active(state)
+    if not issue_id or not await _guard_manage(call, session, user, project_id, i18n):
+        return
+    target = await session.get(User, int(call.data.split(":", 1)[1]))
+    if target is None:
+        await call.answer(i18n.get("err-unknown-member"), show_alert=True)
+        return
+    added = await subscribe(session, target.telegram_id, issue_id)
+    if added:
+        issue = await (await workspace.get_client(session)).get_issue(issue_id)
+        ident = issue["identifier"] if issue else ""
+        try:
+            await bot.send_message(
+                target.telegram_id,
+                i18n.get("sub-added-dm", identifier=ident, by=user.display_name, locale=target.lang),
+            )
+        except Exception:  # noqa: BLE001
+            pass
+    await _render(call=call, message=None, issue_id=issue_id, user=user, session=session, state=state, i18n=i18n)
+    await call.answer(i18n.get("sub-other-done", name=target.display_name))
 
 
 # ── comment ──────────────────────────────────────────────────

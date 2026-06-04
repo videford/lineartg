@@ -98,8 +98,11 @@ async def set_lang(
 
 
 @router.message(Command("help"))
-async def cmd_help(message: Message, user: User, i18n: I18nContext) -> None:
-    await message.answer(i18n.get("help-body", role=user.role.value))
+async def cmd_help(
+    message: Message, user: User, session: AsyncSession, i18n: I18nContext
+) -> None:
+    # Everything is button-driven now — /help just opens the menu.
+    await _show_main(message, user, session, i18n)
 
 
 @router.message(Command("whoami"))

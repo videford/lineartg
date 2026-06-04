@@ -18,14 +18,11 @@ from bot.db import User
 from bot.handlers import admin as admin_h
 from bot.handlers import assign as assign_h
 from bot.handlers import my as my_h
-from bot.handlers import tasks as tasks_h
 from bot.handlers import team as team_h
 from bot.keyboards.inline import open_card_button
 from bot.keyboards.menu import (
     EMOJI_ADMIN,
-    EMOJI_ASSIGN,
     EMOJI_CREATE,
-    EMOJI_HELP,
     EMOJI_MY,
     EMOJI_PROJECTS,
     EMOJI_SEARCH,
@@ -89,14 +86,7 @@ async def btn_my(
 async def btn_create(
     message: Message, user: User, session: AsyncSession, state: FSMContext, i18n: I18nContext
 ) -> None:
-    await state.clear()
-    await tasks_h.cmd_task(message, user, session, state, i18n)
-
-
-@router.message(F.text.startswith(EMOJI_ASSIGN))
-async def btn_assign(
-    message: Message, user: User, session: AsyncSession, state: FSMContext, i18n: I18nContext
-) -> None:
+    # Creating a task always goes through assignment — no orphan tasks.
     await state.clear()
     await assign_h.cmd_assign(message, user, session, state, i18n)
 
@@ -120,12 +110,6 @@ async def btn_projects(
 async def btn_settings(message: Message, state: FSMContext, i18n: I18nContext) -> None:
     await state.clear()
     await message.answer(i18n.get("settings-title"), reply_markup=settings_menu(i18n))
-
-
-@router.message(F.text.startswith(EMOJI_HELP))
-async def btn_help(message: Message, user: User, state: FSMContext, i18n: I18nContext) -> None:
-    await state.clear()
-    await message.answer(i18n.get("help-body", role=user.role.value))
 
 
 @router.message(F.text.startswith(EMOJI_ADMIN))
@@ -174,7 +158,9 @@ async def search_received(
 
 @router.callback_query(F.data == "set:lang")
 async def set_lang_menu(call: CallbackQuery, i18n: I18nContext) -> None:
-    await call.message.answer(i18n.get("start-choose-lang"), reply_markup=lang_keyboard())
+    await call.message.edit_text(
+        i18n.get("start-choose-lang"), reply_markup=lang_keyboard(with_back=True)
+    )
     await call.answer()
 
 
@@ -185,10 +171,27 @@ async def set_profile(
     status = await describe_status(session, user, i18n)
     kb = InlineKeyboardBuilder()
     kb.button(text=i18n.get("profile-change-name"), callback_data="set:name")
-    await call.message.answer(
+    kb.button(text=i18n.get("nav-back"), callback_data="nav:settings")
+    kb.adjust(1)
+    await call.message.edit_text(
         i18n.get("profile-card", name=user.display_name, status=status),
         reply_markup=kb.as_markup(),
     )
+    await call.answer()
+
+
+@router.callback_query(F.data == "nav:settings")
+async def nav_settings(call: CallbackQuery, i18n: I18nContext) -> None:
+    await call.message.edit_text(i18n.get("settings-title"), reply_markup=settings_menu(i18n))
+    await call.answer()
+
+
+@router.callback_query(F.data == "nav:close")
+async def nav_close(call: CallbackQuery) -> None:
+    try:
+        await call.message.delete()
+    except Exception:  # noqa: BLE001
+        await call.message.edit_reply_markup(reply_markup=None)
     await call.answer()
 
 
@@ -207,8 +210,11 @@ async def set_name_received(
     if len(raw.split()) < 2 or len(raw) > 100:
         await message.answer(i18n.get("reg-name-invalid"))
         return
+    # Keep linear_label fixed: it is the stable owner marker on existing tasks.
+    # Changing it would orphan all previously assigned issues from /my.
+    if not user.linear_label:
+        user.linear_label = slug_label(raw, user.telegram_id)
     user.display_name = raw
-    user.linear_label = slug_label(raw, user.telegram_id)
     await session.commit()
     await state.clear()
     await message.answer(i18n.get("profile-name-updated", name=raw))

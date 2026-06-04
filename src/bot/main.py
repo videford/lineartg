@@ -43,10 +43,8 @@ async def set_commands(bot: Bot) -> None:
     """Populate Telegram's command menu (the blue ☰ button)."""
     await bot.set_my_commands(
         [
+            BotCommand(command="start", description="Старт / Start"),
             BotCommand(command="menu", description="Меню / Menu"),
-            BotCommand(command="my", description="Мои задачи / My tasks"),
-            BotCommand(command="task", description="Создать задачу / Create task"),
-            BotCommand(command="help", description="Помощь / Help"),
         ]
     )
 
