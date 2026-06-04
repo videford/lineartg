@@ -73,7 +73,9 @@ async def _announce_new_issue(session, bot, i18n, issue_id: str, data: dict) -> 
         if exists is not None:
             continue
         try:
-            sent = await bot.send_message(b.telegram_chat_id, text, reply_markup=kb)
+            sent = await bot.send_message(
+                b.telegram_chat_id, text, reply_markup=kb, message_thread_id=b.thread_id
+            )
         except Exception:  # noqa: BLE001
             log.warning("failed to announce new issue to %s", b.telegram_chat_id)
             continue

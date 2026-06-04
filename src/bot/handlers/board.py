@@ -18,6 +18,7 @@ from aiogram.utils.keyboard import InlineKeyboardBuilder
 from aiogram_i18n import I18nContext
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from bot.db import ChatBinding
 from bot.services import workspace
 from bot.services.users import OWNER_PREFIX, list_members
 
@@ -69,8 +70,21 @@ def _kb(i18n: I18nContext, open_count: int = 0):
 
 
 @router.message(Command("board"))
-async def cmd_board(message: Message, i18n: I18nContext) -> None:
-    await message.answer(i18n.get("board-title"), reply_markup=_kb(i18n))
+async def cmd_board(message: Message, session: AsyncSession, i18n: I18nContext) -> None:
+    if message.chat.type != "private":
+        binding = await session.get(ChatBinding, message.chat.id)
+        # If bound to a specific topic, ignore /board in any other topic.
+        if (
+            binding is not None
+            and binding.thread_id is not None
+            and message.message_thread_id != binding.thread_id
+        ):
+            return
+    await message.answer(
+        i18n.get("board-title"),
+        reply_markup=_kb(i18n),
+        message_thread_id=message.message_thread_id,
+    )
 
 
 async def _label_map(session: AsyncSession) -> dict[str, str]:

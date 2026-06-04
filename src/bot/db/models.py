@@ -129,6 +129,8 @@ class ChatBinding(Base, TimestampMixin):
     telegram_chat_id: Mapped[int] = mapped_column(BigInteger, primary_key=True)
     title: Mapped[str | None] = mapped_column(String(256), nullable=True)
     linear_team_id: Mapped[str | None] = mapped_column(String(64), nullable=True)
+    # Forum topic (message_thread_id) the bot is bound to; None = whole chat.
+    thread_id: Mapped[int | None] = mapped_column(BigInteger, nullable=True)
 
 
 class IssueLink(Base, TimestampMixin):

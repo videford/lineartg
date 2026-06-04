@@ -36,7 +36,7 @@ KEYS = [
     "menu-people", "people-title", "people-current", "people-recent", "people-following",
     "notify-new-task",
     "board-title", "board-who", "board-due", "board-free", "board-open", "board-empty",
-    "board-more", "start-group-hint",
+    "board-more", "start-group-hint", "bind-ok-topic",
 ]
 ARGS = {
     "start-welcome": {"name": "X", "status": "Y"},

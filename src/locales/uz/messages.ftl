@@ -70,6 +70,7 @@ comment-added = 💬 Izoh qoʻshildi.
 connect-link = Havolani oching va Linearda ilovani avtorizatsiya qiling:
     { $url }
 bind-ok = Chat bogʻlandi. Linear bildirishnomalari shu yerga keladi.
+bind-ok-topic = Shu mavzuga bogʻlandi. Bot faqat shu yerda ishlaydi va xabar yuboradi.
 
 setrole-usage = Foydalanish: aʼzo xabariga javoban /setrole <member|lead|admin>
 setrole-ok = { $name } roli { $role } ga oʻzgartirildi.

@@ -70,6 +70,7 @@ comment-added = 💬 Comment added.
 connect-link = Open the link and authorize the app in Linear:
     { $url }
 bind-ok = Chat bound. Linear notifications will be delivered here.
+bind-ok-topic = Bound to this topic. The bot will work and post only here.
 
 setrole-usage = Usage: reply to a member's message with /setrole <member|lead|admin>
 setrole-ok = { $name }'s role changed to { $role }.

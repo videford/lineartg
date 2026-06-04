@@ -52,14 +52,19 @@ async def cmd_bind(
     if not can(user.role, Action.BIND_CHAT):
         await message.answer(i18n.get("err-no-permission"))
         return
+    # If run inside a forum topic, bind to that topic only.
+    thread_id = message.message_thread_id if message.is_topic_message else None
     binding = await session.get(ChatBinding, message.chat.id)
     if binding is None:
         binding = ChatBinding(telegram_chat_id=message.chat.id, title=message.chat.title)
         session.add(binding)
-    else:
-        binding.title = message.chat.title
+    binding.title = message.chat.title
+    binding.thread_id = thread_id
     await session.commit()
-    await message.answer(i18n.get("bind-ok"))
+    await message.answer(
+        i18n.get("bind-ok-topic") if thread_id else i18n.get("bind-ok"),
+        message_thread_id=thread_id,
+    )
 
 
 @router.message(Command("setrole"))
