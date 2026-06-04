@@ -100,15 +100,13 @@ def _format_card(
     if len(desc) > 500:
         desc = desc[:500] + "…"
 
-    estimate = issue.get("estimate")
     lines = [
         f"<b>{html.escape(issue['identifier'])}</b> · {html.escape(issue['title'])}",
         f"{i18n.get('card-f-status')}: {issue['state']['name']} · "
         f"{i18n.get('card-f-priority')}: {issue.get('priorityLabel') or '—'}",
         f"{i18n.get('card-f-project')}: {html.escape((issue.get('project') or {}).get('name', '—'))} · "
         f"{i18n.get('card-f-assignee')}: {html.escape(assignee)}",
-        f"{i18n.get('card-f-due')}: {issue.get('dueDate') or '—'} · "
-        f"{i18n.get('card-f-estimate')}: {estimate if estimate is not None else '—'}",
+        f"{i18n.get('card-f-due')}: {issue.get('dueDate') or '—'}",
     ]
     if other_labels:
         lines.append(i18n.get("card-f-labels") + ": " + ", ".join(html.escape(x) for x in other_labels))
@@ -251,6 +249,8 @@ async def show_status(
         return
     client = await workspace.get_client(session)
     states = await client.workflow_states(team_id)
+    # Hide the "Duplicate" state — it's a Linear-specific cancellation reason.
+    states = [s for s in states if s["name"].lower() != "duplicate"]
     await call.message.edit_reply_markup(reply_markup=states_keyboard(i18n, states))
     await call.answer()
 

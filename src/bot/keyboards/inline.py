@@ -90,7 +90,6 @@ def edit_menu_keyboard(i18n) -> InlineKeyboardMarkup:
     kb.button(text=i18n.get("btn-desc"), callback_data="ed:desc")
     kb.button(text=i18n.get("btn-priority"), callback_data="ed:prio")
     kb.button(text=i18n.get("btn-due"), callback_data="ed:due")
-    kb.button(text=i18n.get("btn-estimate"), callback_data="ed:est")
     kb.button(text=i18n.get("btn-labels"), callback_data="ed:lbl")
     kb.button(text=i18n.get("nav-back"), callback_data="act:refresh")
     kb.adjust(2)
