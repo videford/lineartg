@@ -3,7 +3,7 @@ from __future__ import annotations
 from aiogram import F, Router
 from aiogram.filters import Command, CommandStart
 from aiogram.fsm.context import FSMContext
-from aiogram.types import CallbackQuery, Message
+from aiogram.types import CallbackQuery, Message, ReplyKeyboardRemove
 from aiogram_i18n import I18nContext
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -31,6 +31,12 @@ async def cmd_start(
     i18n: I18nContext,
 ) -> None:
     await state.clear()  # escape any half-finished flow on /start
+    if message.chat.type != "private":
+        # No management menu in groups — point users to DM; groups use /board.
+        await message.answer(
+            i18n.get("start-group-hint"), reply_markup=ReplyKeyboardRemove()
+        )
+        return
     # First contact (or not yet registered): collect the real first/last name.
     if not user.registered:
         await state.set_state(Registration.waiting_full_name)

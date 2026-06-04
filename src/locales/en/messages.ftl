@@ -139,6 +139,7 @@ leads-empty = No leads assigned yet.
 # main menu (buttons)
 menu-title = Main menu — use the buttons 👇
 menu-group-hint = The menu lives in the bot DM. Open a chat with me and press /menu.
+start-group-hint = In groups use the dashboard: /board. Management and personal actions are in the bot DM.
 menu-my = 📋 My tasks
 menu-create = ➕ Create
 menu-assign = 👥 Assign
@@ -157,6 +158,7 @@ board-due = 🔥 Deadlines
 board-free = 🆓 Unassigned
 board-open = 📋 All open
 board-empty = Nothing here.
+board-more = …and { $n } more. Open the bot DM for the full list.
 
 # people directory
 people-title = Company members ({ $n }):

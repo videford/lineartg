@@ -1,5 +1,9 @@
 """Team dashboard, usable in group chats via /board: who's working on what,
-burning deadlines, unassigned tasks, and all open tasks. Read-only.
+burning deadlines, unassigned tasks, and all open tasks.
+
+The section buttons stay at the bottom in every view (details shown above), so
+you can switch sections without re-running /board. Task-list sections show
+numbered buttons that open the full task card as a new message below.
 """
 from __future__ import annotations
 
@@ -8,7 +12,8 @@ from datetime import date
 
 from aiogram import F, Router
 from aiogram.filters import Command
-from aiogram.types import CallbackQuery, Message
+from aiogram.fsm.context import FSMContext
+from aiogram.types import CallbackQuery, InlineKeyboardButton, Message
 from aiogram.utils.keyboard import InlineKeyboardBuilder
 from aiogram_i18n import I18nContext
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -19,7 +24,7 @@ from bot.services.users import OWNER_PREFIX, list_members
 router = Router(name="board")
 
 CLOSED = {"completed", "canceled"}
-MAX_LINES = 25
+MAX_OPEN = 10  # how many tasks get a numbered open-button
 
 
 def _owner_labels(issue: dict) -> list[str]:
@@ -38,39 +43,38 @@ def _short(issue: dict) -> str:
     return f"<b>{html.escape(issue['identifier'])}</b> · {html.escape(issue['title'])}"
 
 
-def _menu_kb(i18n: I18nContext):
-    kb = InlineKeyboardBuilder()
-    kb.button(text=i18n.get("board-who"), callback_data="board:who")
-    kb.button(text=i18n.get("board-due"), callback_data="board:due")
-    kb.button(text=i18n.get("board-free"), callback_data="board:free")
-    kb.button(text=i18n.get("board-open"), callback_data="board:open")
-    kb.adjust(2)
-    return kb.as_markup()
+def _section_rows(kb: InlineKeyboardBuilder, i18n: I18nContext) -> None:
+    kb.row(
+        InlineKeyboardButton(text=i18n.get("board-who"), callback_data="board:who"),
+        InlineKeyboardButton(text=i18n.get("board-due"), callback_data="board:due"),
+    )
+    kb.row(
+        InlineKeyboardButton(text=i18n.get("board-free"), callback_data="board:free"),
+        InlineKeyboardButton(text=i18n.get("board-open"), callback_data="board:open"),
+    )
 
 
-def _back_kb(i18n: I18nContext):
+def _kb(i18n: I18nContext, open_count: int = 0):
     kb = InlineKeyboardBuilder()
-    kb.button(text=i18n.get("nav-back"), callback_data="board:menu")
+    row: list[InlineKeyboardButton] = []
+    for n in range(open_count):
+        row.append(InlineKeyboardButton(text=str(n + 1), callback_data=f"li:open:{n}"))
+        if len(row) == 5:
+            kb.row(*row)
+            row = []
+    if row:
+        kb.row(*row)
+    _section_rows(kb, i18n)
     return kb.as_markup()
 
 
 @router.message(Command("board"))
 async def cmd_board(message: Message, i18n: I18nContext) -> None:
-    await message.answer(i18n.get("board-title"), reply_markup=_menu_kb(i18n))
-
-
-@router.callback_query(F.data == "board:menu")
-async def board_menu(call: CallbackQuery, i18n: I18nContext) -> None:
-    await call.message.edit_text(i18n.get("board-title"), reply_markup=_menu_kb(i18n))
-    await call.answer()
+    await message.answer(i18n.get("board-title"), reply_markup=_kb(i18n))
 
 
 async def _label_map(session: AsyncSession) -> dict[str, str]:
-    return {
-        u.linear_label: u.display_name
-        for u in await list_members(session)
-        if u.linear_label
-    }
+    return {u.linear_label: u.display_name for u in await list_members(session) if u.linear_label}
 
 
 async def _issues(session: AsyncSession):
@@ -85,12 +89,28 @@ def _assignee_names(issue: dict, names: dict[str, str]) -> str:
     return ", ".join(names.get(lb, lb[len(OWNER_PREFIX):]) for lb in labels)
 
 
+async def _show_tasks(call, state, i18n, title: str, issues: list[dict], names: dict[str, str]):
+    """Render a task list with numbered open-buttons + the section menu."""
+    shown = issues[:MAX_OPEN]
+    await state.update_data(list_view_ids=[i["id"] for i in shown])
+    lines = [f"<b>{title}</b>"]
+    if not shown:
+        lines.append(i18n.get("board-empty"))
+    for n, i in enumerate(shown, start=1):
+        state_name = (i.get("state") or {}).get("name", "")
+        due = f" · ⏰{i['dueDate']}" if i.get("dueDate") else ""
+        lines.append(f"{n}. {_short(i)} — {html.escape(state_name)}{due} · {html.escape(_assignee_names(i, names))}")
+    if len(issues) > MAX_OPEN:
+        lines.append(i18n.get("board-more", n=len(issues) - MAX_OPEN))
+    await call.message.edit_text("\n".join(lines), reply_markup=_kb(i18n, len(shown)))
+    await call.answer()
+
+
 @router.callback_query(F.data == "board:who")
 async def board_who(call: CallbackQuery, session: AsyncSession, i18n: I18nContext) -> None:
     issues = await _issues(session)
     names = await _label_map(session)
     started = [i for i in issues if (i.get("state") or {}).get("type") == "started"]
-
     by_owner: dict[str, list[str]] = {}
     for i in started:
         for lb in _owner_labels(i) or ["—"]:
@@ -101,53 +121,38 @@ async def board_who(call: CallbackQuery, session: AsyncSession, i18n: I18nContex
         lines.append(i18n.get("board-empty"))
     for who, ids in sorted(by_owner.items()):
         lines.append(f"• <b>{html.escape(who)}</b>: {', '.join(ids)}")
-    await call.message.edit_text("\n".join(lines[:MAX_LINES]), reply_markup=_back_kb(i18n))
+    await call.message.edit_text("\n".join(lines), reply_markup=_kb(i18n))
     await call.answer()
 
 
 @router.callback_query(F.data == "board:due")
-async def board_due(call: CallbackQuery, session: AsyncSession, i18n: I18nContext) -> None:
+async def board_due(
+    call: CallbackQuery, session: AsyncSession, state: FSMContext, i18n: I18nContext
+) -> None:
     issues = await _issues(session)
     names = await _label_map(session)
-    today = date.today().isoformat()
     dated = sorted(
         (i for i in issues if _is_open(i) and i.get("dueDate")),
         key=lambda i: i["dueDate"],
     )
-    lines = [f"<b>{i18n.get('board-due')}</b>"]
-    if not dated:
-        lines.append(i18n.get("board-empty"))
-    for i in dated[:MAX_LINES]:
-        mark = "🔴" if i["dueDate"] < today else "🟡"
-        lines.append(f"{mark} {i['dueDate']} · {_short(i)} — {html.escape(_assignee_names(i, names))}")
-    await call.message.edit_text("\n".join(lines), reply_markup=_back_kb(i18n))
-    await call.answer()
+    await _show_tasks(call, state, i18n, i18n.get("board-due"), dated, names)
 
 
 @router.callback_query(F.data == "board:free")
-async def board_free(call: CallbackQuery, session: AsyncSession, i18n: I18nContext) -> None:
+async def board_free(
+    call: CallbackQuery, session: AsyncSession, state: FSMContext, i18n: I18nContext
+) -> None:
     issues = await _issues(session)
+    names = await _label_map(session)
     free = [i for i in issues if _is_open(i) and not _owner_labels(i)]
-    lines = [f"<b>{i18n.get('board-free')}</b>"]
-    if not free:
-        lines.append(i18n.get("board-empty"))
-    for i in free[:MAX_LINES]:
-        state = (i.get("state") or {}).get("name", "")
-        lines.append(f"• {_short(i)} — {html.escape(state)}")
-    await call.message.edit_text("\n".join(lines), reply_markup=_back_kb(i18n))
-    await call.answer()
+    await _show_tasks(call, state, i18n, i18n.get("board-free"), free, names)
 
 
 @router.callback_query(F.data == "board:open")
-async def board_open(call: CallbackQuery, session: AsyncSession, i18n: I18nContext) -> None:
+async def board_open(
+    call: CallbackQuery, session: AsyncSession, state: FSMContext, i18n: I18nContext
+) -> None:
     issues = await _issues(session)
     names = await _label_map(session)
     open_issues = [i for i in issues if _is_open(i)]
-    lines = [f"<b>{i18n.get('board-open')}</b> — {len(open_issues)}"]
-    if not open_issues:
-        lines.append(i18n.get("board-empty"))
-    for i in open_issues[:MAX_LINES]:
-        state = (i.get("state") or {}).get("name", "")
-        lines.append(f"• {_short(i)} — {html.escape(state)} · {html.escape(_assignee_names(i, names))}")
-    await call.message.edit_text("\n".join(lines), reply_markup=_back_kb(i18n))
-    await call.answer()
+    await _show_tasks(call, state, i18n, i18n.get("board-open"), open_issues, names)

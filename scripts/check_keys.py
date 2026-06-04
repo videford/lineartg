@@ -36,6 +36,7 @@ KEYS = [
     "menu-people", "people-title", "people-current", "people-recent", "people-following",
     "notify-new-task",
     "board-title", "board-who", "board-due", "board-free", "board-open", "board-empty",
+    "board-more", "start-group-hint",
 ]
 ARGS = {
     "start-welcome": {"name": "X", "status": "Y"},
@@ -53,6 +54,7 @@ ARGS = {
     "roles-done": {"name": "X", "role": "admin"},
     "people-title": {"n": 5},
     "notify-new-task": {"identifier": "FLO-1", "title": "X"},
+    "board-more": {"n": 3},
 }
 
 core = FluentRuntimeCore(path=str(LOCALES_PATH))

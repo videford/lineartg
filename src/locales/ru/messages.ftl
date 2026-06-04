@@ -139,6 +139,7 @@ leads-empty = Лиды ещё не назначены.
 # main menu (buttons)
 menu-title = Главное меню — выбирайте кнопками 👇
 menu-group-hint = Меню доступно в личке с ботом. Откройте чат со мной и нажмите /menu.
+start-group-hint = В группе доступен дашборд: /board. Управление и личные действия — в личном чате со мной.
 menu-my = 📋 Мои задачи
 menu-create = ➕ Создать
 menu-assign = 👥 Назначить
@@ -157,6 +158,7 @@ board-due = 🔥 Дедлайны
 board-free = 🆓 Без исполнителя
 board-open = 📋 Все открытые
 board-empty = Ничего нет.
+board-more = …и ещё { $n }. Откройте бот в личке для полного списка.
 
 # people directory
 people-title = Участники компании ({ $n }):

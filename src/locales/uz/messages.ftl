@@ -139,6 +139,7 @@ leads-empty = Hali liderlar tayinlanmagan.
 # main menu (buttons)
 menu-title = Asosiy menyu — tugmalardan foydalaning 👇
 menu-group-hint = Menyu bot bilan shaxsiy chatda mavjud. Men bilan chatni oching va /menu bosing.
+start-group-hint = Guruhda dashboard mavjud: /board. Boshqaruv va shaxsiy amallar — bot bilan shaxsiy chatda.
 menu-my = 📋 Mening vazifalarim
 menu-create = ➕ Yaratish
 menu-assign = 👥 Biriktirish
@@ -157,6 +158,7 @@ board-due = 🔥 Muddatlar
 board-free = 🆓 Ijrochisiz
 board-open = 📋 Barcha ochiq
 board-empty = Hech narsa yoʻq.
+board-more = …va yana { $n } ta. Toʻliq roʻyxat uchun botni shaxsiy chatda oching.
 
 # people directory
 people-title = Kompaniya aʼzolari ({ $n }):

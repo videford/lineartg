@@ -80,7 +80,7 @@ async def cmd_menu(
 # live in earlier routers, so legitimate input is still caught there first.
 
 
-@router.message(F.text.startswith(EMOJI_MY))
+@router.message(F.chat.type == "private", F.text.startswith(EMOJI_MY))
 async def btn_my(
     message: Message, user: User, session: AsyncSession, state: FSMContext, i18n: I18nContext
 ) -> None:
@@ -88,7 +88,7 @@ async def btn_my(
     await my_h.cmd_my(message, user, session, state, i18n)
 
 
-@router.message(F.text.startswith(EMOJI_CREATE))
+@router.message(F.chat.type == "private", F.text.startswith(EMOJI_CREATE))
 async def btn_create(
     message: Message, user: User, session: AsyncSession, state: FSMContext, i18n: I18nContext
 ) -> None:
@@ -97,7 +97,7 @@ async def btn_create(
     await assign_h.cmd_assign(message, user, session, state, i18n)
 
 
-@router.message(F.text.startswith(EMOJI_BROWSE))
+@router.message(F.chat.type == "private", F.text.startswith(EMOJI_BROWSE))
 async def btn_browse(
     message: Message, user: User, session: AsyncSession, state: FSMContext, i18n: I18nContext
 ) -> None:
@@ -105,14 +105,14 @@ async def btn_browse(
     await browse_h.cmd_browse(message, user, session, state, i18n)
 
 
-@router.message(F.text.startswith(EMOJI_SEARCH))
+@router.message(F.chat.type == "private", F.text.startswith(EMOJI_SEARCH))
 async def btn_search(message: Message, state: FSMContext, i18n: I18nContext) -> None:
     await state.clear()
     await state.set_state(Search.waiting_query)
     await message.answer(i18n.get("search-prompt"))
 
 
-@router.message(F.text.startswith(EMOJI_PROJECTS))
+@router.message(F.chat.type == "private", F.text.startswith(EMOJI_PROJECTS))
 async def btn_projects(
     message: Message, user: User, session: AsyncSession, state: FSMContext, i18n: I18nContext
 ) -> None:
@@ -120,7 +120,7 @@ async def btn_projects(
     await team_h.cmd_projects(message, user, session, state, i18n)
 
 
-@router.message(F.text.startswith(EMOJI_PEOPLE))
+@router.message(F.chat.type == "private", F.text.startswith(EMOJI_PEOPLE))
 async def btn_people(
     message: Message, user: User, session: AsyncSession, state: FSMContext, i18n: I18nContext
 ) -> None:
@@ -128,13 +128,13 @@ async def btn_people(
     await people_h.cmd_people(message, user, session, state, i18n)
 
 
-@router.message(F.text.startswith(EMOJI_SETTINGS))
+@router.message(F.chat.type == "private", F.text.startswith(EMOJI_SETTINGS))
 async def btn_settings(message: Message, state: FSMContext, i18n: I18nContext) -> None:
     await state.clear()
     await message.answer(i18n.get("settings-title"), reply_markup=settings_menu(i18n))
 
 
-@router.message(F.text.startswith(EMOJI_ADMIN))
+@router.message(F.chat.type == "private", F.text.startswith(EMOJI_ADMIN))
 async def btn_admin(message: Message, user: User, state: FSMContext, i18n: I18nContext) -> None:
     await state.clear()
     if not can(user.role, Action.MANAGE_LEADS):
