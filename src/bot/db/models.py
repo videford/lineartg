@@ -101,6 +101,25 @@ class ProjectLead(Base, TimestampMixin):
     )
 
 
+class ProjectMember(Base, TimestampMixin):
+    """A Telegram user who belongs to a project's team. Only project members can
+    be assigned tasks in that project. Leads (ProjectLead) are implicitly part of
+    the team too."""
+
+    __tablename__ = "project_members"
+    __table_args__ = (
+        UniqueConstraint("telegram_id", "project_id", name="uq_member_project"),
+    )
+
+    id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
+    telegram_id: Mapped[int] = mapped_column(
+        BigInteger, ForeignKey("users.telegram_id", ondelete="CASCADE"), index=True
+    )
+    project_id: Mapped[str] = mapped_column(
+        String(64), ForeignKey("projects.id", ondelete="CASCADE"), index=True
+    )
+
+
 class ChatBinding(Base, TimestampMixin):
     """Links a Telegram group chat to a default Linear team. The chat is
     shared (not per-project), so the project is chosen at task-creation time."""

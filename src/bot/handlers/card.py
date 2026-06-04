@@ -29,7 +29,8 @@ from bot.keyboards.inline import (
 from bot.linear import LinearClient
 from bot.services import workspace
 from bot.services.permissions import can_comment, can_manage_task, is_owner_of
-from bot.services.users import OWNER_PREFIX, list_members
+from bot.services.projects import is_project_team, project_team
+from bot.services.users import OWNER_PREFIX
 from bot.states import Card
 
 router = Router(name="card")
@@ -376,8 +377,11 @@ async def show_assign(
     issue_id, _, project_id = await _active(state)
     if not issue_id or not await _guard_manage(call, session, user, project_id, i18n):
         return
-    members = await list_members(session)
-    await call.message.edit_reply_markup(reply_markup=members_keyboard(members, prefix="ra"))
+    team = await project_team(session, project_id)
+    if not team:
+        await call.answer(i18n.get("assign-no-team"), show_alert=True)
+        return
+    await call.message.edit_reply_markup(reply_markup=members_keyboard(team, prefix="ra"))
     await call.answer()
 
 
@@ -391,6 +395,9 @@ async def reassign(
     target = await session.get(User, int(call.data.split(":", 1)[1]))
     if target is None:
         await call.answer(i18n.get("err-unknown-member"), show_alert=True)
+        return
+    if not await is_project_team(session, target.telegram_id, project_id):
+        await call.answer(i18n.get("assign-not-in-team"), show_alert=True)
         return
     client = await workspace.get_client(session)
     issue = await client.get_issue(issue_id)

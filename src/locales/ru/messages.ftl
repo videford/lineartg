@@ -1,9 +1,22 @@
 reg-ask-name = Добро пожаловать! Введите ваши имя и фамилию (например: Иван Петров) — они будут отображаться в задачах.
 reg-name-invalid = Пожалуйста, введите имя и фамилию через пробел (например: Иван Петров).
 reg-done = Готово, { $name }! Профиль сохранён.
-whoami = Вы: { $name }. Роль: { $role }.
+whoami = Вы: { $name }
+    { $status }
 
-start-welcome = Привет, { $name }! Ваша роль: { $role }.
+# status / profile
+status-admin = 👑 Администратор (полный доступ)
+status-lead = ⭐ Лид проектов: { $projects }
+status-member = 👤 Участник
+profile-card = 👤 Профиль
+    Имя: { $name }
+    Статус: { $status }
+profile-change-name = ✏️ Изменить имя
+profile-send-name = Отправьте новое имя и фамилию (например: Иван Петров).
+profile-name-updated = Готово, имя обновлено: { $name }
+
+start-welcome = Привет, { $name }!
+    { $status }
 start-choose-lang = Выберите язык интерфейса:
 lang-set = Готово, язык сохранён.
 help-body =
@@ -29,6 +42,8 @@ task-created = ✅ Создана задача { $identifier }: { $url }
 assign-choose-member = Кому назначить?
 assign-dm-failed = Не удалось отправить ЛС пользователю { $name } — пусть откроет бота через /start.
 assigned-dm = 📌 Вам назначена задача { $identifier }: { $title } (назначил: { $by })
+assign-no-team = В этом проекте пока нет участников. Добавьте их через 📂 Проекты.
+assign-not-in-team = Этот пользователь не входит в команду проекта.
 
 my-no-label = Ваш профиль ещё не привязан. Выполните /start.
 my-empty = У вас нет активных задач.
@@ -77,6 +92,21 @@ menu-search = 🔎 Поиск
 menu-settings = ⚙️ Настройки
 menu-help = ❓ Помощь
 menu-admin = 🛠 Управление
+menu-projects = 📂 Проекты
+
+# project team management
+team-no-projects = У вас нет проектов для управления командой.
+team-choose-project = Выберите проект:
+team-view = Команда проекта «{ $project }»:
+    { $members }
+    Нажмите ❌, чтобы убрать участника, или «Добавить».
+team-add-btn = ➕ Добавить участника
+team-add-choose = Кого добавить в команду?
+team-back = ⬅️ Назад
+team-added = Добавлен
+team-removed = Убран
+team-no-candidates = Все зарегистрированные пользователи уже в команде.
+team-lead-hint = Это лид проекта. Лидов меняют через 🛠 → Назначить лида.
 
 settings-title = Настройки:
 settings-language = 🌐 Язык

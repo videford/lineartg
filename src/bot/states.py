@@ -11,6 +11,10 @@ class Search(StatesGroup):
     waiting_query = State()
 
 
+class Profile(StatesGroup):
+    waiting_name = State()
+
+
 class SetLead(StatesGroup):
     waiting_project = State()
     waiting_member = State()

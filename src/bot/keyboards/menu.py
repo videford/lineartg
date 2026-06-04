@@ -12,6 +12,7 @@ EMOJI_SEARCH = "🔎"
 EMOJI_SETTINGS = "⚙️"
 EMOJI_HELP = "❓"
 EMOJI_ADMIN = "🛠"
+EMOJI_PROJECTS = "📂"
 
 
 def main_menu(i18n, *, is_admin: bool, is_lead: bool) -> ReplyKeyboardMarkup:
@@ -20,6 +21,7 @@ def main_menu(i18n, *, is_admin: bool, is_lead: bool) -> ReplyKeyboardMarkup:
         rows.append(
             [KeyboardButton(text=i18n.get("menu-assign")), KeyboardButton(text=i18n.get("menu-search"))]
         )
+        rows.append([KeyboardButton(text=i18n.get("menu-projects"))])
     else:
         rows.append([KeyboardButton(text=i18n.get("menu-search"))])
     rows.append(

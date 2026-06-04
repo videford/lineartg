@@ -11,8 +11,7 @@ from bot.db import User
 from bot.keyboards.inline import members_keyboard, projects_keyboard
 from bot.services import workspace
 from bot.services.permissions import can_create_in
-from bot.services.projects import get_project, manageable_projects
-from bot.services.users import list_members
+from bot.services.projects import get_project, manageable_projects, project_team
 from bot.states import AssignTask
 
 router = Router(name="assign")
@@ -56,10 +55,15 @@ async def assign_project_chosen(
         await call.answer(i18n.get("err-no-permission"), show_alert=True)
         return
     await state.update_data(project_id=project_id)
+    team = await project_team(session, project_id)
+    if not team:
+        await call.message.edit_text(i18n.get("assign-no-team"))
+        await state.clear()
+        await call.answer()
+        return
     await state.set_state(AssignTask.waiting_assignee)
-    members = await list_members(session)
     await call.message.edit_text(
-        i18n.get("assign-choose-member"), reply_markup=members_keyboard(members)
+        i18n.get("assign-choose-member"), reply_markup=members_keyboard(team)
     )
     await call.answer()
 

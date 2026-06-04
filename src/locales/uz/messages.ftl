@@ -1,9 +1,22 @@
 reg-ask-name = Xush kelibsiz! Ism va familiyangizni kiriting (masalan: Alisher Karimov) — ular vazifalarda koʻrsatiladi.
 reg-name-invalid = Iltimos, ism va familiyani boʻsh joy bilan kiriting (masalan: Alisher Karimov).
 reg-done = Tayyor, { $name }! Profil saqlandi.
-whoami = Siz: { $name }. Rol: { $role }.
+whoami = Siz: { $name }
+    { $status }
 
-start-welcome = Salom, { $name }! Sizning rolingiz: { $role }.
+# status / profile
+status-admin = 👑 Administrator (toʻliq huquq)
+status-lead = ⭐ Loyiha lideri: { $projects }
+status-member = 👤 Aʼzo
+profile-card = 👤 Profil
+    Ism: { $name }
+    Holat: { $status }
+profile-change-name = ✏️ Ismni oʻzgartirish
+profile-send-name = Yangi ism va familiyangizni yuboring (masalan: Ali Valiyev).
+profile-name-updated = Tayyor, ism yangilandi: { $name }
+
+start-welcome = Salom, { $name }!
+    { $status }
 start-choose-lang = Interfeys tilini tanlang:
 lang-set = Tayyor, til saqlandi.
 help-body =
@@ -29,6 +42,8 @@ task-created = ✅ Vazifa yaratildi { $identifier }: { $url }
 assign-choose-member = Kimga biriktirilsin?
 assign-dm-failed = { $name }ga shaxsiy xabar yuborilmadi — u /start orqali botni ochsin.
 assigned-dm = 📌 Sizga vazifa biriktirildi { $identifier }: { $title } (biriktirdi: { $by })
+assign-no-team = Bu loyihada hali aʼzolar yoʻq. Ularni 📂 Loyihalar orqali qoʻshing.
+assign-not-in-team = Bu foydalanuvchi loyiha jamoasida emas.
 
 my-no-label = Profilingiz hali bogʻlanmagan. /start ni bajaring.
 my-empty = Sizda faol vazifalar yoʻq.
@@ -77,6 +92,21 @@ menu-search = 🔎 Qidirish
 menu-settings = ⚙️ Sozlamalar
 menu-help = ❓ Yordam
 menu-admin = 🛠 Boshqaruv
+menu-projects = 📂 Loyihalar
+
+# project team management
+team-no-projects = Jamoasini boshqarish uchun loyihangiz yoʻq.
+team-choose-project = Loyihani tanlang:
+team-view = "{ $project }" loyihasi jamoasi:
+    { $members }
+    Aʼzoni olib tashlash uchun ❌ yoki Qoʻshish bosing.
+team-add-btn = ➕ Aʼzo qoʻshish
+team-add-choose = Jamoaga kimni qoʻshamiz?
+team-back = ⬅️ Orqaga
+team-added = Qoʻshildi
+team-removed = Olib tashlandi
+team-no-candidates = Barcha roʻyxatdan oʻtgan foydalanuvchilar allaqachon jamoada.
+team-lead-hint = Bu loyiha lideri. Liderlar 🛠 → Lider tayinlash orqali boshqariladi.
 
 settings-title = Sozlamalar:
 settings-language = 🌐 Til

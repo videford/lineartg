@@ -10,6 +10,7 @@ from aiogram import F, Router
 from aiogram.filters import Command
 from aiogram.fsm.context import FSMContext
 from aiogram.types import CallbackQuery, Message
+from aiogram.utils.keyboard import InlineKeyboardBuilder
 from aiogram_i18n import I18nContext
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -18,6 +19,7 @@ from bot.handlers import admin as admin_h
 from bot.handlers import assign as assign_h
 from bot.handlers import my as my_h
 from bot.handlers import tasks as tasks_h
+from bot.handlers import team as team_h
 from bot.keyboards.inline import open_card_button
 from bot.keyboards.menu import (
     EMOJI_ADMIN,
@@ -25,6 +27,7 @@ from bot.keyboards.menu import (
     EMOJI_CREATE,
     EMOJI_HELP,
     EMOJI_MY,
+    EMOJI_PROJECTS,
     EMOJI_SEARCH,
     EMOJI_SETTINGS,
     admin_menu,
@@ -35,8 +38,9 @@ from bot.keyboards.inline import lang_keyboard
 from bot.services import workspace
 from bot.services.permissions import Action, can
 from bot.services.projects import sync_projects
-from bot.services.users import list_members  # noqa: F401  (kept for parity)
-from bot.states import Search
+from bot.services.status import describe_status
+from bot.services.users import slug_label
+from bot.states import Profile, Search
 
 router = Router(name="menu")
 log = logging.getLogger(__name__)
@@ -104,6 +108,14 @@ async def btn_search(message: Message, state: FSMContext, i18n: I18nContext) -> 
     await message.answer(i18n.get("search-prompt"))
 
 
+@router.message(F.text.startswith(EMOJI_PROJECTS))
+async def btn_projects(
+    message: Message, user: User, session: AsyncSession, state: FSMContext, i18n: I18nContext
+) -> None:
+    await state.clear()
+    await team_h.cmd_projects(message, user, session, state, i18n)
+
+
 @router.message(F.text.startswith(EMOJI_SETTINGS))
 async def btn_settings(message: Message, state: FSMContext, i18n: I18nContext) -> None:
     await state.clear()
@@ -167,11 +179,39 @@ async def set_lang_menu(call: CallbackQuery, i18n: I18nContext) -> None:
 
 
 @router.callback_query(F.data == "set:profile")
-async def set_profile(call: CallbackQuery, user: User, i18n: I18nContext) -> None:
+async def set_profile(
+    call: CallbackQuery, user: User, session: AsyncSession, i18n: I18nContext
+) -> None:
+    status = await describe_status(session, user, i18n)
+    kb = InlineKeyboardBuilder()
+    kb.button(text=i18n.get("profile-change-name"), callback_data="set:name")
     await call.message.answer(
-        i18n.get("whoami", name=user.display_name, role=user.role.value)
+        i18n.get("profile-card", name=user.display_name, status=status),
+        reply_markup=kb.as_markup(),
     )
     await call.answer()
+
+
+@router.callback_query(F.data == "set:name")
+async def set_name_start(call: CallbackQuery, state: FSMContext, i18n: I18nContext) -> None:
+    await state.set_state(Profile.waiting_name)
+    await call.message.answer(i18n.get("profile-send-name"))
+    await call.answer()
+
+
+@router.message(Profile.waiting_name)
+async def set_name_received(
+    message: Message, user: User, session: AsyncSession, state: FSMContext, i18n: I18nContext
+) -> None:
+    raw = (message.text or "").strip()
+    if len(raw.split()) < 2 or len(raw) > 100:
+        await message.answer(i18n.get("reg-name-invalid"))
+        return
+    user.display_name = raw
+    user.linear_label = slug_label(raw, user.telegram_id)
+    await session.commit()
+    await state.clear()
+    await message.answer(i18n.get("profile-name-updated", name=raw))
 
 
 # ── admin submenu (delegate to command handlers) ─────────────

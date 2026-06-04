@@ -1,9 +1,22 @@
 reg-ask-name = Welcome! Please enter your first and last name (e.g. John Smith) — it will be shown on tasks.
 reg-name-invalid = Please enter both first and last name separated by a space (e.g. John Smith).
 reg-done = Done, { $name }! Profile saved.
-whoami = You are: { $name }. Role: { $role }.
+whoami = You are: { $name }
+    { $status }
 
-start-welcome = Hi, { $name }! Your role: { $role }.
+# status / profile
+status-admin = 👑 Admin (full access)
+status-lead = ⭐ Lead of: { $projects }
+status-member = 👤 Member
+profile-card = 👤 Profile
+    Name: { $name }
+    Status: { $status }
+profile-change-name = ✏️ Change name
+profile-send-name = Send your new first and last name (e.g. John Smith).
+profile-name-updated = Done, name updated: { $name }
+
+start-welcome = Hi, { $name }!
+    { $status }
 start-choose-lang = Choose your language:
 lang-set = Done, language saved.
 help-body =
@@ -29,6 +42,8 @@ task-created = ✅ Created task { $identifier }: { $url }
 assign-choose-member = Assign to whom?
 assign-dm-failed = Couldn't DM { $name } — ask them to open the bot via /start.
 assigned-dm = 📌 You've been assigned task { $identifier }: { $title } (by { $by })
+assign-no-team = This project has no team members yet. Add them via 📂 Projects.
+assign-not-in-team = This user is not part of the project team.
 
 my-no-label = Your profile isn't linked yet. Run /start.
 my-empty = You have no active tasks.
@@ -77,6 +92,21 @@ menu-search = 🔎 Search
 menu-settings = ⚙️ Settings
 menu-help = ❓ Help
 menu-admin = 🛠 Manage
+menu-projects = 📂 Projects
+
+# project team management
+team-no-projects = You have no projects to manage a team for.
+team-choose-project = Choose a project:
+team-view = Team of "{ $project }":
+    { $members }
+    Tap ❌ to remove a member, or Add.
+team-add-btn = ➕ Add member
+team-add-choose = Who to add to the team?
+team-back = ⬅️ Back
+team-added = Added
+team-removed = Removed
+team-no-candidates = All registered users are already on the team.
+team-lead-hint = This is a project lead. Manage leads via 🛠 → Assign lead.
 
 settings-title = Settings:
 settings-language = 🌐 Language

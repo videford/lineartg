@@ -12,6 +12,7 @@ from bot.keyboards.inline import lang_keyboard
 from bot.keyboards.menu import main_menu
 from bot.middlewares.i18n import SUPPORTED_LOCALES
 from bot.services.permissions import Action, can, is_any_lead
+from bot.services.status import describe_status
 from bot.services.users import slug_label
 from bot.states import Registration
 
@@ -67,8 +68,9 @@ async def _show_main(
 ) -> None:
     is_admin = can(user.role, Action.MANAGE_LEADS)
     is_lead = await is_any_lead(session, user.telegram_id)
+    status = await describe_status(session, user, i18n)
     await message.answer(
-        i18n.get("start-welcome", name=user.display_name, role=user.role.value),
+        i18n.get("start-welcome", name=user.display_name, status=status),
         reply_markup=main_menu(i18n, is_admin=is_admin, is_lead=is_lead),
     )
 
@@ -101,7 +103,8 @@ async def cmd_help(message: Message, user: User, i18n: I18nContext) -> None:
 
 
 @router.message(Command("whoami"))
-async def cmd_whoami(message: Message, user: User, i18n: I18nContext) -> None:
-    await message.answer(
-        i18n.get("whoami", name=user.display_name, role=user.role.value)
-    )
+async def cmd_whoami(
+    message: Message, user: User, session: AsyncSession, i18n: I18nContext
+) -> None:
+    status = await describe_status(session, user, i18n)
+    await message.answer(i18n.get("whoami", name=user.display_name, status=status))
