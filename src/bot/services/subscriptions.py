@@ -44,3 +44,14 @@ async def subscriber_ids(session: AsyncSession, issue_id: str) -> list[int]:
             )
         )
     )
+
+
+async def subscriptions_of(session: AsyncSession, telegram_id: int) -> list[str]:
+    """Linear issue ids a user is subscribed to."""
+    return list(
+        await session.scalars(
+            select(Subscription.linear_issue_id).where(
+                Subscription.telegram_id == telegram_id
+            )
+        )
+    )

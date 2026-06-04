@@ -3,12 +3,13 @@ from __future__ import annotations
 from aiogram import Bot, F, Router
 from aiogram.filters import Command
 from aiogram.fsm.context import FSMContext
-from aiogram.types import CallbackQuery, Message
+from aiogram.types import CallbackQuery, InlineKeyboardButton, Message
+from aiogram.utils.keyboard import InlineKeyboardBuilder
 from aiogram_i18n import I18nContext
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from bot.db import User
-from bot.keyboards.inline import members_keyboard, projects_keyboard
+from bot.keyboards.inline import projects_keyboard
 from bot.services import workspace
 from bot.services.permissions import can_create_in
 from bot.services.projects import get_project, manageable_projects, project_team
@@ -57,15 +58,14 @@ async def assign_project_chosen(
         return
     await state.update_data(project_id=project_id)
     team = await project_team(session, project_id)
-    if not team:
-        await call.message.edit_text(i18n.get("assign-no-team"))
-        await state.clear()
-        await call.answer()
-        return
     await state.set_state(AssignTask.waiting_assignee)
-    await call.message.edit_text(
-        i18n.get("assign-choose-member"), reply_markup=members_keyboard(team)
-    )
+    # Team members + an explicit "no assignee" option (task can wait for an owner).
+    kb = InlineKeyboardBuilder()
+    for m in team:
+        kb.button(text=m.display_name, callback_data=f"asgn:{m.telegram_id}")
+    kb.adjust(2)
+    kb.row(InlineKeyboardButton(text=i18n.get("assign-none"), callback_data="asgn:none"))
+    await call.message.edit_text(i18n.get("assign-choose-member"), reply_markup=kb.as_markup())
     await call.answer()
 
 
@@ -73,7 +73,8 @@ async def assign_project_chosen(
 async def assign_member_chosen(
     call: CallbackQuery, state: FSMContext, i18n: I18nContext
 ) -> None:
-    await state.update_data(assignee_tg_id=int(call.data.split(":", 1)[1]))
+    raw = call.data.split(":", 1)[1]
+    await state.update_data(assignee_tg_id=None if raw == "none" else int(raw))
     await state.set_state(AssignTask.waiting_title)
     await call.message.edit_text(i18n.get("task-send-title"))
     await call.answer()
@@ -99,29 +100,35 @@ async def assign_title_received(
         await state.clear()
         return
 
-    assignee = await session.get(User, data["assignee_tg_id"])
     project = await get_project(session, project_id)
-    if assignee is None or project is None or not project.team_id:
-        await message.answer(i18n.get("err-unknown-member"))
+    if project is None or not project.team_id:
+        await message.answer(i18n.get("err-no-projects"))
         await state.clear()
         return
 
+    assignee_id = data.get("assignee_tg_id")
+    assignee = await session.get(User, assignee_id) if assignee_id else None
+
     client = await workspace.get_client(session)
-    label_id = await client.ensure_label(project.team_id, assignee.linear_label)
+    label_ids = None
+    if assignee is not None:
+        label_ids = [await client.ensure_label(project.team_id, assignee.linear_label)]
     issue = await client.create_issue(
         title=title,
         team_id=project.team_id,
         project_id=project_id,
-        label_ids=[label_id],
+        label_ids=label_ids,
         actor_name=user.display_name,
         actor_icon=user.avatar_url,
     )
-    await subscribe(session, assignee.telegram_id, issue["id"])
     await state.clear()
     await message.answer(
         i18n.get("task-created", identifier=issue["identifier"], url=issue["url"])
     )
 
+    if assignee is None:
+        return  # unassigned task — nobody to subscribe/notify
+    await subscribe(session, assignee.telegram_id, issue["id"])
     try:
         await bot.send_message(
             assignee.telegram_id,

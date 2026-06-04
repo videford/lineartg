@@ -41,6 +41,19 @@ async def get_or_create_user(
         )
         session.add(user)
         await session.commit()
+        return user
+
+    # Auto-heal: bootstrap admins are always admin (can't accidentally lose it).
+    changed = False
+    if telegram_id in settings.admin_ids and user.role != Role.admin:
+        user.role = Role.admin
+        changed = True
+    # Keep the Telegram @username fresh for profile deep-links.
+    if username and user.username != username:
+        user.username = username
+        changed = True
+    if changed:
+        await session.commit()
     return user
 
 

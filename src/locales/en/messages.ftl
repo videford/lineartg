@@ -43,6 +43,7 @@ assign-choose-member = Assign to whom?
 assign-dm-failed = Couldn't DM { $name } — ask them to open the bot via /start.
 assigned-dm = 📌 You've been assigned task { $identifier }: { $title } (by { $by })
 assign-no-team = This project has no team members yet. Add them via 📂 Projects.
+assign-none = ➖ No assignee
 assign-not-in-team = This user is not part of the project team.
 
 my-title = My tasks
@@ -146,6 +147,13 @@ menu-help = ❓ Help
 menu-admin = 🛠 Manage
 menu-projects = 📂 My projects
 menu-browse = 🗂 Tasks
+menu-people = 👥 People
+
+# people directory
+people-title = Company members ({ $n }):
+people-current = Currently in progress:
+people-recent = Recently completed:
+people-following = Following (not assignee):
 
 # browse all tasks
 browse-no-projects = Projects aren't loaded yet. Contact an admin.
@@ -190,6 +198,8 @@ roles-confirm-admin = ⚠️ Make "{ $name }" an admin? They will get full acces
 roles-yes = ✅ Yes, grant
 roles-no = ❌ Cancel
 roles-done = { $name }'s role changed to { $role }.
+roles-no-self = You can't change your own role.
+roles-bootstrap-locked = This is a permanent admin — role can't be changed.
 
 search-prompt = Type part of an issue title to search:
 search-empty = Nothing found.

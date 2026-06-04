@@ -14,6 +14,7 @@ EMOJI_HELP = "❓"
 EMOJI_ADMIN = "🛠"
 EMOJI_PROJECTS = "📂"
 EMOJI_BROWSE = "🗂"
+EMOJI_PEOPLE = "👥"
 
 
 def main_menu(i18n, *, is_admin: bool, is_lead: bool) -> ReplyKeyboardMarkup:
@@ -22,7 +23,7 @@ def main_menu(i18n, *, is_admin: bool, is_lead: bool) -> ReplyKeyboardMarkup:
         rows = [
             [KeyboardButton(text=i18n.get("menu-my")), KeyboardButton(text=i18n.get("menu-projects"))],
             [KeyboardButton(text=i18n.get("menu-create")), KeyboardButton(text=i18n.get("menu-search"))],
-            [KeyboardButton(text=i18n.get("menu-browse"))],
+            [KeyboardButton(text=i18n.get("menu-browse")), KeyboardButton(text=i18n.get("menu-people"))],
             [KeyboardButton(text=i18n.get("menu-settings"))],
         ]
         if is_admin:
@@ -30,7 +31,7 @@ def main_menu(i18n, *, is_admin: bool, is_lead: bool) -> ReplyKeyboardMarkup:
     else:
         rows = [
             [KeyboardButton(text=i18n.get("menu-my")), KeyboardButton(text=i18n.get("menu-search"))],
-            [KeyboardButton(text=i18n.get("menu-browse"))],
+            [KeyboardButton(text=i18n.get("menu-browse")), KeyboardButton(text=i18n.get("menu-people"))],
             [KeyboardButton(text=i18n.get("menu-settings"))],
         ]
     return ReplyKeyboardMarkup(keyboard=rows, resize_keyboard=True, is_persistent=True)
@@ -40,7 +41,6 @@ def settings_menu(i18n) -> "InlineKeyboardMarkup":  # noqa: F821
     kb = InlineKeyboardBuilder()
     kb.button(text=i18n.get("settings-language"), callback_data="set:lang")
     kb.button(text=i18n.get("settings-profile"), callback_data="set:profile")
-    kb.button(text=i18n.get("nav-close"), callback_data="nav:close")
     kb.adjust(1)
     return kb.as_markup()
 
@@ -52,6 +52,5 @@ def admin_menu(i18n) -> "InlineKeyboardMarkup":  # noqa: F821
     kb.button(text=i18n.get("admin-setlead"), callback_data="adm:setlead")
     kb.button(text=i18n.get("admin-leads"), callback_data="adm:leads")
     kb.button(text=i18n.get("admin-roles"), callback_data="adm:roles")
-    kb.button(text=i18n.get("nav-close"), callback_data="nav:close")
     kb.adjust(1)
     return kb.as_markup()

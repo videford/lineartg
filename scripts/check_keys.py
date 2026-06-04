@@ -32,6 +32,8 @@ KEYS = [
     "btn-open-linear", "btn-title", "btn-desc", "btn-priority", "btn-due",
     "btn-estimate", "btn-labels", "btn-clear", "btn-done",
     "due-today", "due-tomorrow", "due-3d", "due-7d", "due-custom-btn",
+    "roles-no-self", "roles-bootstrap-locked", "assign-none",
+    "menu-people", "people-title", "people-current", "people-recent", "people-following",
 ]
 ARGS = {
     "start-welcome": {"name": "X", "status": "Y"},
@@ -47,6 +49,7 @@ ARGS = {
     "roles-choose-role": {"name": "X"},
     "roles-confirm-admin": {"name": "X"},
     "roles-done": {"name": "X", "role": "admin"},
+    "people-title": {"n": 5},
 }
 
 core = FluentRuntimeCore(path=str(LOCALES_PATH))

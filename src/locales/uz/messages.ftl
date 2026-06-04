@@ -43,6 +43,7 @@ assign-choose-member = Kimga biriktirilsin?
 assign-dm-failed = { $name }ga shaxsiy xabar yuborilmadi — u /start orqali botni ochsin.
 assigned-dm = 📌 Sizga vazifa biriktirildi { $identifier }: { $title } (biriktirdi: { $by })
 assign-no-team = Bu loyihada hali aʼzolar yoʻq. Ularni 📂 Loyihalar orqali qoʻshing.
+assign-none = ➖ Ijrochisiz
 assign-not-in-team = Bu foydalanuvchi loyiha jamoasida emas.
 
 my-title = Mening vazifalarim
@@ -146,6 +147,13 @@ menu-help = ❓ Yordam
 menu-admin = 🛠 Boshqaruv
 menu-projects = 📂 Mening loyihalarim
 menu-browse = 🗂 Vazifalar
+menu-people = 👥 Aʼzolar
+
+# people directory
+people-title = Kompaniya aʼzolari ({ $n }):
+people-current = Hozir jarayonda:
+people-recent = Yaqinda yakunlangan:
+people-following = Obuna (ijrochi emas):
 
 # browse all tasks
 browse-no-projects = Loyihalar hali yuklanmagan. Administratorga murojaat qiling.
@@ -190,6 +198,8 @@ roles-confirm-admin = ⚠️ «{ $name }»ni administrator qilamizmi? Unga toʻl
 roles-yes = ✅ Ha, tayinlash
 roles-no = ❌ Bekor qilish
 roles-done = { $name } roli { $role } ga oʻzgartirildi.
+roles-no-self = Oʻz rolingizni oʻzgartira olmaysiz.
+roles-bootstrap-locked = Bu doimiy administrator — roli oʻzgartirilmaydi.
 
 search-prompt = Qidirish uchun vazifa nomining bir qismini kiriting:
 search-empty = Hech narsa topilmadi.

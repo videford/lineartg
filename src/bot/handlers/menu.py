@@ -19,6 +19,7 @@ from bot.handlers import admin as admin_h
 from bot.handlers import assign as assign_h
 from bot.handlers import browse as browse_h
 from bot.handlers import my as my_h
+from bot.handlers import people as people_h
 from bot.handlers import tasklist
 from bot.handlers import team as team_h
 from bot.keyboards.menu import (
@@ -26,6 +27,7 @@ from bot.keyboards.menu import (
     EMOJI_BROWSE,
     EMOJI_CREATE,
     EMOJI_MY,
+    EMOJI_PEOPLE,
     EMOJI_PROJECTS,
     EMOJI_SEARCH,
     EMOJI_SETTINGS,
@@ -34,6 +36,7 @@ from bot.keyboards.menu import (
     settings_menu,
 )
 from bot.keyboards.inline import lang_keyboard
+from bot.config import settings
 from bot.services import workspace
 from bot.services.permissions import Action, can
 from bot.services.projects import sync_projects
@@ -115,6 +118,14 @@ async def btn_projects(
 ) -> None:
     await state.clear()
     await team_h.cmd_projects(message, user, session, state, i18n)
+
+
+@router.message(F.text.startswith(EMOJI_PEOPLE))
+async def btn_people(
+    message: Message, user: User, session: AsyncSession, state: FSMContext, i18n: I18nContext
+) -> None:
+    await state.clear()
+    await people_h.cmd_people(message, user, session, state, i18n)
 
 
 @router.message(F.text.startswith(EMOJI_SETTINGS))
@@ -296,6 +307,12 @@ async def role_pick_user(
         await call.answer(i18n.get("err-no-permission"), show_alert=True)
         return
     tg_id = int(call.data.split(":", 1)[1])
+    if tg_id == user.telegram_id:
+        await call.answer(i18n.get("roles-no-self"), show_alert=True)
+        return
+    if tg_id in settings.admin_ids:
+        await call.answer(i18n.get("roles-bootstrap-locked"), show_alert=True)
+        return
     target = await session.get(User, tg_id)
     if target is None:
         await call.answer(i18n.get("err-unknown-member"), show_alert=True)
