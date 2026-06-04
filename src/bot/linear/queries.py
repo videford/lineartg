@@ -124,6 +124,25 @@ mutation CommentCreate($input: CommentCreateInput!) {
 }
 """
 
+ALL_ISSUES = """
+query AllIssues {
+  issues(first: 100, orderBy: updatedAt) {
+    nodes {
+      id
+      identifier
+      title
+      url
+      dueDate
+      priority
+      priorityLabel
+      state { name type }
+      labels(first: 20) { nodes { name } }
+      project { name }
+    }
+  }
+}
+"""
+
 ISSUES_BY_PROJECT = """
 query IssuesByProject($projectId: String!) {
   project(id: $projectId) {

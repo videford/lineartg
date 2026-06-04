@@ -74,6 +74,7 @@ bind-ok = Chat bound. Linear notifications will be delivered here.
 setrole-usage = Usage: reply to a member's message with /setrole <member|lead|admin>
 setrole-ok = { $name }'s role changed to { $role }.
 
+notify-new-task = 🆕 New task { $identifier } · { $title }
 notify-comment = 💬 { $user }: { $body }
 notify-status = 🔁 { $identifier } → { $state }
 
@@ -148,6 +149,14 @@ menu-admin = 🛠 Manage
 menu-projects = 📂 My projects
 menu-browse = 🗂 Tasks
 menu-people = 👥 People
+
+# team dashboard (/board)
+board-title = 📊 Team dashboard — choose a section:
+board-who = 👥 Who's busy
+board-due = 🔥 Deadlines
+board-free = 🆓 Unassigned
+board-open = 📋 All open
+board-empty = Nothing here.
 
 # people directory
 people-title = Company members ({ $n }):

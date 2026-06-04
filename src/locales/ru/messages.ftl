@@ -74,6 +74,7 @@ bind-ok = Чат привязан. Уведомления Linear будут пр
 setrole-usage = Использование: ответьте на сообщение участника командой /setrole <member|lead|admin>
 setrole-ok = Роль пользователя { $name } изменена на { $role }.
 
+notify-new-task = 🆕 Новая задача { $identifier } · { $title }
 notify-comment = 💬 { $user }: { $body }
 notify-status = 🔁 { $identifier } → { $state }
 
@@ -148,6 +149,14 @@ menu-admin = 🛠 Управление
 menu-projects = 📂 Мои проекты
 menu-browse = 🗂 Задачи
 menu-people = 👥 Участники
+
+# team dashboard (/board)
+board-title = 📊 Дашборд команды — выберите раздел:
+board-who = 👥 Кто чем занят
+board-due = 🔥 Дедлайны
+board-free = 🆓 Без исполнителя
+board-open = 📋 Все открытые
+board-empty = Ничего нет.
 
 # people directory
 people-title = Участники компании ({ $n }):

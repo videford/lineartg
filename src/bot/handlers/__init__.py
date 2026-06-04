@@ -3,6 +3,7 @@ from aiogram import Router
 from bot.handlers import (
     admin,
     assign,
+    board,
     browse,
     card,
     menu,
@@ -24,6 +25,7 @@ def build_router() -> Router:
     root.include_router(tasklist.router)
     root.include_router(browse.router)
     root.include_router(people.router)
+    root.include_router(board.router)
     root.include_router(my.router)
     root.include_router(menu.router)
     return root

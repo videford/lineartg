@@ -54,9 +54,12 @@ PRIORITIES = [(1, "🔴 Urgent"), (2, "🟠 High"), (3, "🟡 Medium"), (4, "�
 ESTIMATES = [0, 1, 2, 3, 5, 8]
 
 
-def open_card_button(issue_id: str) -> InlineKeyboardMarkup:
+def open_card_button(issue_id: str, *, new: bool = False) -> InlineKeyboardMarkup:
+    # new=True opens the card as a NEW message (for group/announcement messages
+    # that shouldn't be replaced); otherwise edits the current message.
+    prefix = "ocard" if new else "card"
     kb = InlineKeyboardBuilder()
-    kb.button(text="🔎 Открыть", callback_data=f"card:{issue_id}")
+    kb.button(text="🔎 Открыть", callback_data=f"{prefix}:{issue_id}")
     return kb.as_markup()
 
 

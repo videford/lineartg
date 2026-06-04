@@ -74,6 +74,7 @@ bind-ok = Chat bogʻlandi. Linear bildirishnomalari shu yerga keladi.
 setrole-usage = Foydalanish: aʼzo xabariga javoban /setrole <member|lead|admin>
 setrole-ok = { $name } roli { $role } ga oʻzgartirildi.
 
+notify-new-task = 🆕 Yangi vazifa { $identifier } · { $title }
 notify-comment = 💬 { $user }: { $body }
 notify-status = 🔁 { $identifier } → { $state }
 
@@ -148,6 +149,14 @@ menu-admin = 🛠 Boshqaruv
 menu-projects = 📂 Mening loyihalarim
 menu-browse = 🗂 Vazifalar
 menu-people = 👥 Aʼzolar
+
+# team dashboard (/board)
+board-title = 📊 Jamoa paneli — boʻlimni tanlang:
+board-who = 👥 Kim band
+board-due = 🔥 Muddatlar
+board-free = 🆓 Ijrochisiz
+board-open = 📋 Barcha ochiq
+board-empty = Hech narsa yoʻq.
 
 # people directory
 people-title = Kompaniya aʼzolari ({ $n }):

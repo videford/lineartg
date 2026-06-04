@@ -34,6 +34,8 @@ KEYS = [
     "due-today", "due-tomorrow", "due-3d", "due-7d", "due-custom-btn",
     "roles-no-self", "roles-bootstrap-locked", "assign-none",
     "menu-people", "people-title", "people-current", "people-recent", "people-following",
+    "notify-new-task",
+    "board-title", "board-who", "board-due", "board-free", "board-open", "board-empty",
 ]
 ARGS = {
     "start-welcome": {"name": "X", "status": "Y"},
@@ -50,6 +52,7 @@ ARGS = {
     "roles-confirm-admin": {"name": "X"},
     "roles-done": {"name": "X", "role": "admin"},
     "people-title": {"n": 5},
+    "notify-new-task": {"identifier": "FLO-1", "title": "X"},
 }
 
 core = FluentRuntimeCore(path=str(LOCALES_PATH))

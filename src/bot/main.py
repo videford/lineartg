@@ -45,6 +45,7 @@ async def set_commands(bot: Bot) -> None:
         [
             BotCommand(command="start", description="Старт / Start"),
             BotCommand(command="menu", description="Меню / Menu"),
+            BotCommand(command="board", description="Дашборд команды / Team board"),
         ]
     )
 

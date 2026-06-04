@@ -9,8 +9,9 @@ from aiohttp import web
 from sqlalchemy import select
 
 from bot.config import settings
-from bot.db import IssueLink, WebhookDedup
+from bot.db import ChatBinding, IssueLink, WebhookDedup
 from bot.db.session import session_factory
+from bot.keyboards.inline import open_card_button
 from bot.services.subscriptions import subscriber_ids
 
 log = logging.getLogger(__name__)
@@ -54,6 +55,39 @@ async def linear_webhook(request: web.Request) -> web.Response:
     return web.Response(text="ok")
 
 
+async def _announce_new_issue(session, bot, i18n, issue_id: str, data: dict) -> None:
+    identifier = data.get("identifier", "")
+    title = data.get("title", "")
+    text = i18n.get("notify-new-task", locale=settings.default_lang, identifier=identifier, title=title)
+    kb = open_card_button(issue_id, new=True)
+
+    bindings = list(await session.scalars(select(ChatBinding)))
+    for b in bindings:
+        # Skip if this issue was already posted to this chat (e.g. bot created it here).
+        exists = await session.scalar(
+            select(IssueLink).where(
+                IssueLink.linear_issue_id == issue_id,
+                IssueLink.telegram_chat_id == b.telegram_chat_id,
+            )
+        )
+        if exists is not None:
+            continue
+        try:
+            sent = await bot.send_message(b.telegram_chat_id, text, reply_markup=kb)
+        except Exception:  # noqa: BLE001
+            log.warning("failed to announce new issue to %s", b.telegram_chat_id)
+            continue
+        session.add(
+            IssueLink(
+                linear_issue_id=issue_id,
+                linear_issue_identifier=identifier,
+                telegram_chat_id=b.telegram_chat_id,
+                telegram_message_id=sent.message_id,
+            )
+        )
+    await session.commit()
+
+
 async def _route_event(session, bot, i18n, payload: dict) -> None:
     action = payload.get("action")
     entity_type = payload.get("type")
@@ -61,6 +95,11 @@ async def _route_event(session, bot, i18n, payload: dict) -> None:
 
     issue_id = data.get("issueId") if entity_type == "Comment" else data.get("id")
     if not issue_id:
+        return
+
+    # New task → announce to every bound group chat.
+    if entity_type == "Issue" and action == "create":
+        await _announce_new_issue(session, bot, i18n, issue_id, data)
         return
 
     if entity_type == "Comment" and action == "create":

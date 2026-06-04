@@ -225,6 +225,15 @@ async def open_card(
     await call.answer()
 
 
+@router.callback_query(F.data.startswith("ocard:"))
+async def open_card_new(
+    call: CallbackQuery, user: User, session: AsyncSession, state: FSMContext, i18n: I18nContext
+) -> None:
+    issue_id = call.data.split(":", 1)[1]
+    await open_issue_card(call.message, issue_id, user=user, session=session, state=state, i18n=i18n)
+    await call.answer()
+
+
 @router.callback_query(F.data == "act:refresh")
 async def refresh_card(
     call: CallbackQuery, user: User, session: AsyncSession, state: FSMContext, i18n: I18nContext
