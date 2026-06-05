@@ -166,7 +166,7 @@ board-bind-first = Bu guruh bogʻlanmagan. Admin kerakli mavzuda /bind bajarishi
 people-title = Kompaniya aʼzolari ({ $n }):
 people-current = Hozir jarayonda:
 people-recent = Yaqinda yakunlangan:
-people-following = Obuna (ijrochi emas):
+people-following = Obuna:
 
 # browse all tasks
 browse-no-projects = Loyihalar hali yuklanmagan. Administratorga murojaat qiling.

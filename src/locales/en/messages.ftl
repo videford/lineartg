@@ -166,7 +166,7 @@ board-bind-first = This group isn't bound. An admin must run /bind in the desire
 people-title = Company members ({ $n }):
 people-current = Currently in progress:
 people-recent = Recently completed:
-people-following = Following (not assignee):
+people-following = Following:
 
 # browse all tasks
 browse-no-projects = Projects aren't loaded yet. Contact an admin.

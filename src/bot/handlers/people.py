@@ -84,16 +84,9 @@ async def people_profile(
 
     own = await client.issues_by_label(target.linear_label) if target.linear_label else []
     current = [i for i in own if (i.get("state") or {}).get("type") == "started"]
-    done = [i for i in own if (i.get("state") or {}).get("type") == "completed"][:5]
-
-    lines.append("─────────")
-    lines.append("<b>" + i18n.get("people-current") + "</b>")
-    lines += [_line(i) for i in current] or ["—"]
-    lines.append("<b>" + i18n.get("people-recent") + "</b>")
-    lines += [_line(i) for i in done] or ["—"]
 
     # Followed-but-not-owner: subscriptions where target isn't the assignee.
-    followed: list[str] = []
+    followed: list[dict] = []
     for issue_id in (await subscriptions_of(session, tg_id))[:MAX_SUBS]:
         issue = await client.get_issue(issue_id)
         if not issue:
@@ -105,11 +98,22 @@ async def people_profile(
         ]
         if target.linear_label and target.linear_label in owner_labels:
             continue
-        followed.append(_line(issue))
+        followed.append(issue)
+
+    lines.append("─────────")
+    lines.append("<b>" + i18n.get("people-current") + "</b>")
+    lines += [_line(i) for i in current] or ["—"]
     lines.append("<b>" + i18n.get("people-following") + "</b>")
-    lines += followed or ["—"]
+    lines += [_line(i) for i in followed] or ["—"]
 
     kb = InlineKeyboardBuilder()
+    # one openable button per listed task (opens the card as a new message)
+    for issue in [*current, *followed]:
+        kb.button(
+            text=f"📋 {issue['identifier']} · {issue['title']}"[:60],
+            callback_data=f"ocard:{issue['id']}",
+        )
+    kb.adjust(1)
     kb.button(text=i18n.get("nav-back"), callback_data="ppl:list")
     await call.message.edit_text(
         "\n".join(lines), reply_markup=kb.as_markup(), disable_web_page_preview=True
