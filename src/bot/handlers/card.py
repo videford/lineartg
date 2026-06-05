@@ -28,6 +28,7 @@ from bot.keyboards.inline import (
     states_keyboard,
 )
 from bot.linear import LinearClient
+from bot.middlewares.i18n import SUPPORTED_LOCALES
 from bot.services import workspace
 from bot.services.permissions import can_manage_task
 from bot.services.projects import is_project_team, project_team
@@ -600,10 +601,12 @@ async def subscribe_other(
     if added:
         issue = await (await workspace.get_client(session)).get_issue(issue_id)
         ident = issue["identifier"] if issue else ""
+        # locale is positional-only on .get(); keyword would render in sender's lang.
+        lang = target.lang if target.lang in SUPPORTED_LOCALES else None
         try:
             await bot.send_message(
                 target.telegram_id,
-                i18n.get("sub-added-dm", identifier=ident, by=user.display_name, locale=target.lang),
+                i18n.get("sub-added-dm", lang, identifier=ident, by=user.display_name),
             )
         except Exception:  # noqa: BLE001
             pass

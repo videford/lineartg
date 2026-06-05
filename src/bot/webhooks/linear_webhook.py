@@ -9,12 +9,24 @@ from aiohttp import web
 from sqlalchemy import select
 
 from bot.config import settings
-from bot.db import ChatBinding, IssueLink, WebhookDedup
+from bot.db import ChatBinding, IssueLink, User, WebhookDedup
 from bot.db.session import session_factory
 from bot.keyboards.inline import open_card_button
+from bot.middlewares.i18n import SUPPORTED_LOCALES
 from bot.services.subscriptions import subscriber_ids
 
 log = logging.getLogger(__name__)
+
+
+async def _chat_locale(session, chat_id: int) -> str:
+    """Group chats (negative id) always use English; a private chat id equals the
+    user's Telegram id, so we render in that user's chosen language."""
+    if chat_id < 0:
+        return "en"
+    user = await session.get(User, chat_id)
+    if user is not None and user.lang in SUPPORTED_LOCALES:
+        return user.lang
+    return settings.default_lang
 
 
 def _verify_signature(raw_body: bytes, signature: str | None) -> bool:
@@ -58,7 +70,6 @@ async def linear_webhook(request: web.Request) -> web.Response:
 async def _announce_new_issue(session, bot, i18n, issue_id: str, data: dict) -> None:
     identifier = data.get("identifier", "")
     title = data.get("title", "")
-    text = i18n.get("notify-new-task", locale=settings.default_lang, identifier=identifier, title=title)
     kb = open_card_button(issue_id, new=True)
 
     bindings = list(await session.scalars(select(ChatBinding)))
@@ -72,6 +83,8 @@ async def _announce_new_issue(session, bot, i18n, issue_id: str, data: dict) -> 
         )
         if exists is not None:
             continue
+        locale = await _chat_locale(session, b.telegram_chat_id)
+        text = i18n.get("notify-new-task", locale, identifier=identifier, title=title)
         try:
             sent = await bot.send_message(
                 b.telegram_chat_id, text, reply_markup=kb, message_thread_id=b.thread_id
@@ -107,11 +120,11 @@ async def _route_event(session, bot, i18n, payload: dict) -> None:
     if entity_type == "Comment" and action == "create":
         body = data.get("body", "")
         user = (data.get("user") or {}).get("name", "Linear")
-        text = i18n.get("notify-comment", locale=settings.default_lang, user=user, body=body)
+        render = lambda loc: i18n.get("notify-comment", loc, user=user, body=body)  # noqa: E731
     elif entity_type == "Issue" and action == "update":
         state = (data.get("state") or {}).get("name", "?")
         ident = data.get("identifier", "")
-        text = i18n.get("notify-status", locale=settings.default_lang, identifier=ident, state=state)
+        render = lambda loc: i18n.get("notify-status", loc, identifier=ident, state=state)  # noqa: E731
     else:
         return
 
@@ -127,19 +140,21 @@ async def _route_event(session, bot, i18n, payload: dict) -> None:
         if link.telegram_chat_id in seen_chats:
             continue
         seen_chats.add(link.telegram_chat_id)
+        locale = await _chat_locale(session, link.telegram_chat_id)
         try:
             await bot.send_message(
-                link.telegram_chat_id, text, reply_to_message_id=link.telegram_message_id
+                link.telegram_chat_id, render(locale), reply_to_message_id=link.telegram_message_id
             )
         except Exception:  # noqa: BLE001
             log.warning("failed to deliver Linear event to %s", link.telegram_chat_id)
 
-    # 2) DM every subscriber of this issue (a private chat id == the user id).
+    # 2) DM every subscriber of this issue (a private chat id == the user id),
+    #    each in their own chosen language.
     for tg_id in await subscriber_ids(session, issue_id):
         if tg_id in seen_chats:
             continue
         seen_chats.add(tg_id)
         try:
-            await bot.send_message(tg_id, text)
+            await bot.send_message(tg_id, render(await _chat_locale(session, tg_id)))
         except Exception:  # noqa: BLE001
             log.warning("failed to deliver Linear event to subscriber %s", tg_id)

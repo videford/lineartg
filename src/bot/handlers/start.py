@@ -37,12 +37,33 @@ async def cmd_start(
             i18n.get("start-group-hint"), reply_markup=ReplyKeyboardRemove()
         )
         return
-    # First contact (or not yet registered): collect the real first/last name.
+    # First contact: ask for the language first (in English, since we don't yet
+    # know the user's choice), then the real first/last name.
     if not user.registered:
-        await state.set_state(Registration.waiting_full_name)
-        await message.answer(i18n.get("reg-ask-name"))
+        await state.set_state(Registration.waiting_lang)
+        await message.answer(
+            "🌐 Please choose your language / Выберите язык / Tilni tanlang:",
+            reply_markup=lang_keyboard(),
+        )
         return
     await _show_main(message, user, session, i18n)
+
+
+@router.callback_query(Registration.waiting_lang, F.data.startswith("lang:"))
+async def reg_lang_received(
+    call: CallbackQuery, user: User, session: AsyncSession, state: FSMContext, i18n: I18nContext
+) -> None:
+    code = call.data.split(":", 1)[1]
+    if code not in SUPPORTED_LOCALES:
+        await call.answer()
+        return
+    user.lang = code
+    await session.commit()
+    await i18n.set_locale(code, user=user)
+    await state.set_state(Registration.waiting_full_name)
+    # Now ask for the name in the chosen language.
+    await call.message.edit_text(i18n.get("reg-ask-name"))
+    await call.answer()
 
 
 @router.message(Registration.waiting_full_name)
@@ -65,8 +86,9 @@ async def reg_name_received(
     await session.commit()
     await state.clear()
 
+    # Language was already chosen at the start of registration; go to the menu.
     await message.answer(i18n.get("reg-done", name=raw))
-    await message.answer(i18n.get("start-choose-lang"), reply_markup=lang_keyboard())
+    await _show_main(message, user, session, i18n)
 
 
 async def _show_main(

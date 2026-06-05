@@ -31,6 +31,7 @@ from bot.keyboards.inline import (
     draft_priority_keyboard,
     projects_keyboard,
 )
+from bot.middlewares.i18n import SUPPORTED_LOCALES
 from bot.services import workspace
 from bot.services.permissions import can_create_in
 from bot.services.projects import get_project, manageable_projects, project_team
@@ -41,6 +42,20 @@ router = Router(name="draft")
 
 _PRIO_LABELS = dict(PRIORITIES)
 DESC_PREVIEW_MAX = 500
+
+
+def _cancel_kb(i18n: I18nContext):
+    kb = InlineKeyboardBuilder()
+    kb.button(text=i18n.get("draft-btn-cancel"), callback_data="dft:cancel")
+    return kb.as_markup()
+
+
+def _desc_kb(i18n: I18nContext):
+    kb = InlineKeyboardBuilder()
+    kb.button(text=i18n.get("draft-desc-skip"), callback_data="dft:skipdesc")
+    kb.button(text=i18n.get("draft-btn-cancel"), callback_data="dft:cancel")
+    kb.adjust(2)
+    return kb.as_markup()
 
 
 # ── entry ────────────────────────────────────────────────────
@@ -100,7 +115,7 @@ async def draft_project_chosen(
         editing=False,
     )
     await state.set_state(DraftTask.waiting_title)
-    await call.message.edit_text(i18n.get("draft-send-title"))
+    await call.message.edit_text(i18n.get("draft-send-title"), reply_markup=_cancel_kb(i18n))
     await call.answer()
 
 
@@ -121,11 +136,9 @@ async def draft_title_received(
         await state.update_data(editing=False)
         await _refresh_preview(message.bot, session, state, i18n)
         return
-    # Initial flow: ask for a description next (skippable).
+    # Initial flow: ask for a description next (skippable / cancellable).
     await state.set_state(DraftTask.waiting_desc)
-    kb = InlineKeyboardBuilder()
-    kb.button(text=i18n.get("draft-desc-skip"), callback_data="dft:skipdesc")
-    await message.answer(i18n.get("draft-send-desc"), reply_markup=kb.as_markup())
+    await message.answer(i18n.get("draft-send-desc"), reply_markup=_desc_kb(i18n))
 
 
 @router.callback_query(DraftTask.waiting_desc, F.data == "dft:skipdesc")
@@ -247,7 +260,7 @@ async def draft_back(
 async def draft_edit_title(call: CallbackQuery, state: FSMContext, i18n: I18nContext) -> None:
     await state.update_data(editing=True)
     await state.set_state(DraftTask.waiting_title)
-    await call.message.answer(i18n.get("draft-send-title"))
+    await call.message.answer(i18n.get("draft-send-title"), reply_markup=_cancel_kb(i18n))
     await call.answer()
 
 
@@ -255,7 +268,7 @@ async def draft_edit_title(call: CallbackQuery, state: FSMContext, i18n: I18nCon
 async def draft_edit_desc(call: CallbackQuery, state: FSMContext, i18n: I18nContext) -> None:
     await state.update_data(editing=True)
     await state.set_state(DraftTask.waiting_desc)
-    await call.message.answer(i18n.get("draft-send-desc"))
+    await call.message.answer(i18n.get("draft-send-desc"), reply_markup=_cancel_kb(i18n))
     await call.answer()
 
 
@@ -293,7 +306,7 @@ async def draft_set_due(
     raw = call.data.split(":", 1)[1]
     if raw == "custom":
         await state.set_state(DraftTask.waiting_due)
-        await call.message.answer(i18n.get("due-prompt"))
+        await call.message.answer(i18n.get("due-prompt"), reply_markup=_cancel_kb(i18n))
         await call.answer()
         return
     value = None if raw == "none" else (date.today() + timedelta(days=int(raw))).isoformat()
@@ -501,7 +514,10 @@ async def draft_publish(
 
 
 async def _notify(bot: Bot, target: User, i18n: I18nContext, *, key: str, **kw) -> None:
+    # `locale` is positional-only on I18nContext.get — passing it as a keyword
+    # would make it a Fluent variable and render in the sender's locale instead.
+    lang = target.lang if target.lang in SUPPORTED_LOCALES else None
     try:
-        await bot.send_message(target.telegram_id, i18n.get(key, locale=target.lang, **kw))
+        await bot.send_message(target.telegram_id, i18n.get(key, lang, **kw))
     except Exception:  # noqa: BLE001 — user hasn't opened the bot, etc.
         pass
