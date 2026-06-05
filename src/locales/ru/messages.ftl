@@ -216,6 +216,12 @@ admin-sync = 🔄 Синхронизировать проекты
 admin-setlead = 👑 Назначить лида
 admin-leads = 📜 Список лидов
 admin-roles = 👑 Роли
+admin-groups = 🔔 Объявления в группах
+
+groups-title = Группы (нажмите, чтобы включить/выключить сообщения бота):
+groups-empty = Пока нет привязанных групп. Привяжите через /bind в группе.
+groups-on = 🔔 Объявления включены
+groups-off = 🔕 Объявления выключены
 
 roles-choose-user = Кому изменить роль?
 roles-choose-role = { $name }: выберите роль

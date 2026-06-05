@@ -216,6 +216,12 @@ admin-sync = 🔄 Loyihalarni sinxronlash
 admin-setlead = 👑 Lider tayinlash
 admin-leads = 📜 Liderlar roʻyxati
 admin-roles = 👑 Rollar
+admin-groups = 🔔 Guruh eʼlonlari
+
+groups-title = Guruhlar (bot xabarlarini yoqish/oʻchirish uchun bosing):
+groups-empty = Hali bogʻlangan guruhlar yoʻq. Guruhda /bind orqali bogʻlang.
+groups-on = 🔔 Eʼlonlar yoqildi
+groups-off = 🔕 Eʼlonlar oʻchirildi
 
 roles-choose-user = Kimning rolini oʻzgartiramiz?
 roles-choose-role = { $name }: rolni tanlang

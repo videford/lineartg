@@ -36,6 +36,10 @@ class RegistrationGate(BaseMiddleware):
             current = await state.get_state() if state else None
             if current == Registration.waiting_full_name.state:
                 return await handler(event, data)
+            # Never prompt inside groups — it spams the chat (and the wrong
+            # topic). Registration happens in DM; just stay silent here.
+            if event.chat.type != "private":
+                return None
             await event.answer(PROMPT)
             return None
 

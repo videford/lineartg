@@ -12,6 +12,7 @@ from aiogram.fsm.context import FSMContext
 from aiogram.types import CallbackQuery, Message
 from aiogram.utils.keyboard import InlineKeyboardBuilder
 from aiogram_i18n import I18nContext
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from bot.db import Role, User
@@ -280,6 +281,59 @@ async def adm_leads(call: CallbackQuery, user: User, session: AsyncSession, i18n
 async def adm_back(call: CallbackQuery, i18n: I18nContext) -> None:
     await call.message.edit_text(i18n.get("admin-title"), reply_markup=admin_menu(i18n))
     await call.answer()
+
+
+# ── group announcements on/off ───────────────────────────────
+
+
+async def _groups_keyboard(session: AsyncSession, i18n: I18nContext):
+    from bot.db import ChatBinding
+
+    bindings = list(await session.scalars(select(ChatBinding)))
+    kb = InlineKeyboardBuilder()
+    for b in bindings:
+        mark = "🔔" if b.announce else "🔕"
+        title = b.title or str(b.telegram_chat_id)
+        kb.button(text=f"{mark} {title}", callback_data=f"grpmute:{b.telegram_chat_id}")
+    kb.button(text=i18n.get("nav-back"), callback_data="adm:back")
+    kb.adjust(1)
+    return bindings, kb.as_markup()
+
+
+@router.callback_query(F.data == "adm:groups")
+async def adm_groups(
+    call: CallbackQuery, user: User, session: AsyncSession, i18n: I18nContext
+) -> None:
+    if not can(user.role, Action.BIND_CHAT):
+        await call.answer(i18n.get("err-no-permission"), show_alert=True)
+        return
+    bindings, kb = await _groups_keyboard(session, i18n)
+    text = i18n.get("groups-title") if bindings else i18n.get("groups-empty")
+    await call.message.edit_text(text, reply_markup=kb)
+    await call.answer()
+
+
+@router.callback_query(F.data.startswith("grpmute:"))
+async def adm_group_toggle(
+    call: CallbackQuery, user: User, session: AsyncSession, i18n: I18nContext
+) -> None:
+    if not can(user.role, Action.BIND_CHAT):
+        await call.answer(i18n.get("err-no-permission"), show_alert=True)
+        return
+    from bot.db import ChatBinding
+
+    chat_id = int(call.data.split(":", 1)[1])
+    binding = await session.get(ChatBinding, chat_id)
+    if binding is None:
+        await call.answer()
+        return
+    binding.announce = not binding.announce
+    await session.commit()
+    _, kb = await _groups_keyboard(session, i18n)
+    await call.message.edit_reply_markup(reply_markup=kb)
+    await call.answer(
+        i18n.get("groups-on") if binding.announce else i18n.get("groups-off")
+    )
 
 
 # ── role management (with confirmation for admin) ────────────

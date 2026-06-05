@@ -112,6 +112,10 @@ async def draft_project_chosen(
         draft_due=None,
         draft_assignee=None,
         draft_subs=[],
+        draft_state_id=None,
+        draft_state_name=None,
+        draft_label_ids=[],
+        draft_label_names={},
         editing=False,
     )
     await state.set_state(DraftTask.waiting_title)
@@ -175,6 +179,10 @@ async def _build_preview(session: AsyncSession, state: FSMContext, i18n: I18nCon
     prio = data.get("draft_priority")
     prio_label = _PRIO_LABELS.get(prio) if prio is not None else "—"
     due = data.get("draft_due") or "—"
+    status = data.get("draft_state_name") or "—"
+    label_names = data.get("draft_label_names") or {}
+    label_ids = data.get("draft_label_ids") or []
+    labels = ", ".join(label_names.get(lid, lid) for lid in label_ids) or "—"
 
     assignee = "—"
     if data.get("draft_assignee"):
@@ -198,6 +206,8 @@ async def _build_preview(session: AsyncSession, state: FSMContext, i18n: I18nCon
         f"{i18n.get('card-f-project')}: {html.escape(data.get('draft_project_name') or '—')} · "
         f"{i18n.get('card-f-assignee')}: {html.escape(assignee)}",
         f"{i18n.get('card-f-priority')}: {prio_label} · {i18n.get('card-f-due')}: {due}",
+        f"{i18n.get('card-f-status')}: {html.escape(status)} · "
+        f"{i18n.get('card-f-labels')}: {html.escape(labels)}",
         f"{i18n.get('card-f-subscribers')}: {html.escape(subs)}",
         "─────────",
         f"{i18n.get('draft-f-desc')}:",
@@ -287,6 +297,92 @@ async def draft_set_priority(
 ) -> None:
     await state.update_data(draft_priority=int(call.data.split(":", 1)[1]))
     await _edit_preview(call, session, state, i18n)
+    await call.answer(i18n.get("toast-saved"))
+
+
+# ── status (workflow state) ──────────────────────────────────
+
+
+def _states_kb(i18n: I18nContext, states: list[dict]):
+    kb = InlineKeyboardBuilder()
+    for s in states:
+        kb.button(text=s["name"], callback_data=f"dstt:{s['id']}")
+    kb.button(text=i18n.get("nav-back"), callback_data="dft:back")
+    kb.adjust(2)
+    return kb.as_markup()
+
+
+@router.callback_query(F.data == "dft:status")
+async def draft_show_status(
+    call: CallbackQuery, session: AsyncSession, state: FSMContext, i18n: I18nContext
+) -> None:
+    data = await state.get_data()
+    client = await workspace.get_client(session)
+    states = [
+        s for s in await client.workflow_states(data.get("draft_team_id"))
+        if s["name"].lower() != "duplicate"
+    ]
+    await state.update_data(draft_state_cache={s["id"]: s["name"] for s in states})
+    await call.message.edit_reply_markup(reply_markup=_states_kb(i18n, states))
+    await call.answer()
+
+
+@router.callback_query(F.data.startswith("dstt:"))
+async def draft_set_status(
+    call: CallbackQuery, session: AsyncSession, state: FSMContext, i18n: I18nContext
+) -> None:
+    sid = call.data.split(":", 1)[1]
+    cache = (await state.get_data()).get("draft_state_cache") or {}
+    await state.update_data(draft_state_id=sid, draft_state_name=cache.get(sid))
+    await _edit_preview(call, session, state, i18n)
+    await call.answer(i18n.get("toast-saved"))
+
+
+# ── labels (multi-toggle) ────────────────────────────────────
+
+
+def _labels_kb(i18n: I18nContext, labels: list[dict], selected: set):
+    kb = InlineKeyboardBuilder()
+    for lb in labels:
+        if lb["name"].startswith("tg:"):  # owner labels are managed via Assignee
+            continue
+        mark = "☑️ " if lb["id"] in selected else "▫️ "
+        kb.button(text=mark + lb["name"], callback_data=f"dlbl:{lb['id']}")
+    kb.button(text=i18n.get("btn-done"), callback_data="dft:back")
+    kb.adjust(2)
+    return kb.as_markup()
+
+
+async def _labels_markup(session: AsyncSession, state: FSMContext, i18n: I18nContext):
+    data = await state.get_data()
+    client = await workspace.get_client(session)
+    labels = await client.labels(data.get("draft_team_id"))
+    await state.update_data(
+        draft_label_names={lb["id"]: lb["name"] for lb in labels}
+    )
+    return _labels_kb(i18n, labels, set(data.get("draft_label_ids") or []))
+
+
+@router.callback_query(F.data == "dft:lbl")
+async def draft_show_labels(
+    call: CallbackQuery, session: AsyncSession, state: FSMContext, i18n: I18nContext
+) -> None:
+    await call.message.edit_reply_markup(reply_markup=await _labels_markup(session, state, i18n))
+    await call.answer()
+
+
+@router.callback_query(F.data.startswith("dlbl:"))
+async def draft_toggle_label(
+    call: CallbackQuery, session: AsyncSession, state: FSMContext, i18n: I18nContext
+) -> None:
+    lid = call.data.split(":", 1)[1]
+    ids = list((await state.get_data()).get("draft_label_ids") or [])
+    if lid in ids:
+        ids.remove(lid)
+    else:
+        ids.append(lid)
+    await state.update_data(draft_label_ids=ids)
+    await call.message.edit_reply_markup(reply_markup=await _labels_markup(session, state, i18n))
     await call.answer(i18n.get("toast-saved"))
 
 
@@ -450,25 +546,27 @@ async def draft_publish(
     assignee = (
         await session.get(User, data["draft_assignee"]) if data.get("draft_assignee") else None
     )
-    label_ids = None
+    label_ids = list(data.get("draft_label_ids") or [])
     if assignee is not None and assignee.linear_label:
-        label_ids = [await client.ensure_label(project.team_id, assignee.linear_label)]
+        label_ids.append(await client.ensure_label(project.team_id, assignee.linear_label))
 
     issue = await client.create_issue(
         title=title,
         team_id=project.team_id,
         description=(data.get("draft_desc") or "").strip() or None,
         project_id=project_id,
-        label_ids=label_ids,
+        label_ids=label_ids or None,
         actor_name=user.display_name,
         actor_icon=user.avatar_url,
     )
-    # priority/dueDate aren't part of issueCreate input here — set them after.
+    # priority/dueDate/stateId aren't part of issueCreate input here — set after.
     extra: dict = {}
     if data.get("draft_priority") is not None:
         extra["priority"] = data["draft_priority"]
     if data.get("draft_due"):
         extra["dueDate"] = data["draft_due"]
+    if data.get("draft_state_id"):
+        extra["stateId"] = data["draft_state_id"]
     if extra:
         await client.update_issue(issue["id"], **extra)
 

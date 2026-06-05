@@ -216,6 +216,12 @@ admin-sync = 🔄 Sync projects
 admin-setlead = 👑 Assign lead
 admin-leads = 📜 Leads list
 admin-roles = 👑 Roles
+admin-groups = 🔔 Group announcements
+
+groups-title = Groups (tap to turn the bot's messages on/off):
+groups-empty = No bound groups yet. Bind one with /bind inside the group.
+groups-on = 🔔 Announcements on
+groups-off = 🔕 Announcements off
 
 roles-choose-user = Whose role to change?
 roles-choose-role = { $name }: choose a role

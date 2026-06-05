@@ -83,6 +83,8 @@ async def _announce_new_issue(session, bot, i18n, issue_id: str, data: dict) -> 
         )
         if exists is not None:
             continue
+        if not b.announce:
+            continue  # this group muted the bot
         locale = await _chat_locale(session, b.telegram_chat_id)
         text = i18n.get("notify-new-task", locale, identifier=identifier, title=title)
         try:
@@ -140,6 +142,10 @@ async def _route_event(session, bot, i18n, payload: dict) -> None:
         if link.telegram_chat_id in seen_chats:
             continue
         seen_chats.add(link.telegram_chat_id)
+        if link.telegram_chat_id < 0:
+            binding = await session.get(ChatBinding, link.telegram_chat_id)
+            if binding is not None and not binding.announce:
+                continue  # this group muted the bot
         locale = await _chat_locale(session, link.telegram_chat_id)
         try:
             await bot.send_message(

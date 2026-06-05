@@ -146,11 +146,13 @@ def draft_preview_keyboard(i18n) -> InlineKeyboardMarkup:
     kb.button(text=i18n.get("btn-desc"), callback_data="dft:desc")
     kb.button(text=i18n.get("btn-priority"), callback_data="dft:prio")
     kb.button(text=i18n.get("btn-due"), callback_data="dft:due")
+    kb.button(text=i18n.get("btn-status"), callback_data="dft:status")
+    kb.button(text=i18n.get("btn-labels"), callback_data="dft:lbl")
     kb.button(text=i18n.get("draft-btn-assignee"), callback_data="dft:asg")
     kb.button(text=i18n.get("draft-btn-sub"), callback_data="dft:sub")
     kb.button(text=i18n.get("draft-btn-publish"), callback_data="dft:publish")
     kb.button(text=i18n.get("draft-btn-cancel"), callback_data="dft:cancel")
-    kb.adjust(2, 2, 2, 1, 1)
+    kb.adjust(2, 2, 2, 2, 1, 1)
     return kb.as_markup()
 
 

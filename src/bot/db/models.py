@@ -5,6 +5,7 @@ from datetime import datetime
 
 from sqlalchemy import (
     BigInteger,
+    Boolean,
     DateTime,
     Enum,
     ForeignKey,
@@ -131,6 +132,10 @@ class ChatBinding(Base, TimestampMixin):
     linear_team_id: Mapped[str | None] = mapped_column(String(64), nullable=True)
     # Forum topic (message_thread_id) the bot is bound to; None = whole chat.
     thread_id: Mapped[int | None] = mapped_column(BigInteger, nullable=True)
+    # When False, the bot stays silent in this group (no announcements/echoes).
+    announce: Mapped[bool] = mapped_column(
+        Boolean, default=True, server_default="true", nullable=False
+    )
 
 
 class IssueLink(Base, TimestampMixin):
