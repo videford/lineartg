@@ -40,6 +40,13 @@ class RegistrationGate(BaseMiddleware):
             return None
 
         if isinstance(event, CallbackQuery):
+            # The language picker is part of registration itself — let it through
+            # while the user is choosing a language, even though they're not yet
+            # registered. Everything else is blocked until /start completes.
+            state = data.get("state")
+            current = await state.get_state() if state else None
+            if current == Registration.waiting_lang.state and (event.data or "").startswith("lang:"):
+                return await handler(event, data)
             await event.answer(PROMPT, show_alert=True)
             return None
 
