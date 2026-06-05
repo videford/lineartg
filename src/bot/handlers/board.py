@@ -8,7 +8,6 @@ numbered buttons that open the full task card as a new message below.
 from __future__ import annotations
 
 import html
-from datetime import date
 
 from aiogram import F, Router
 from aiogram.filters import Command
@@ -18,6 +17,7 @@ from aiogram.utils.keyboard import InlineKeyboardBuilder
 from aiogram_i18n import I18nContext
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from bot.dates import fmt_date
 from bot.db import ChatBinding, User
 from bot.services import workspace
 from bot.services.permissions import Action, can
@@ -116,7 +116,7 @@ async def _show_tasks(call, state, i18n, title: str, issues: list[dict], names: 
         lines.append(i18n.get("board-empty"))
     for n, i in enumerate(shown, start=1):
         state_name = (i.get("state") or {}).get("name", "")
-        due = f" · ⏰{i['dueDate']}" if i.get("dueDate") else ""
+        due = f" · ⏰{fmt_date(i['dueDate'])}" if i.get("dueDate") else ""
         lines.append(f"{n}. {_short(i)} — {html.escape(state_name)}{due} · {html.escape(_assignee_names(i, names))}")
     if len(issues) > MAX_OPEN:
         lines.append(i18n.get("board-more", n=len(issues) - MAX_OPEN))

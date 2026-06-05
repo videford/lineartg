@@ -133,8 +133,8 @@ sub-off = 🔕 Obuna bekor qilindi
 sub-other-done = Obuna qilindi: { $name }
 sub-added-dm = 🔔 Sizni { $identifier } vazifasiga obuna qilishdi (kim: { $by })
 toast-saved = Saqlandi
-due-prompt = Sanani YYYY-MM-DD yoki DD.MM.YYYY koʻrinishida yuboring (masalan: 2026-06-30).
-due-invalid = Sana tushunarsiz. Format: YYYY-MM-DD yoki DD.MM.YYYY.
+due-prompt = Sanani DD.MM.YYYY koʻrinishida yuboring (masalan: 30.06.2026).
+due-invalid = Sana tushunarsiz. Format: DD.MM.YYYY (masalan: 30.06.2026).
 edit-send-title = Yangi sarlavhani yuboring.
 edit-send-desc = Yangi tavsifni yuboring.
 

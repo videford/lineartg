@@ -7,15 +7,17 @@ limit. Action callbacks therefore carry only short secondary values.
 from __future__ import annotations
 
 import html
-from datetime import date, datetime, timedelta
+from datetime import date, timedelta
 
 from aiogram import Bot, F, Router
 from aiogram.fsm.context import FSMContext
 from aiogram.types import CallbackQuery, Message
+from aiogram.utils.keyboard import InlineKeyboardBuilder
 from aiogram_i18n import I18nContext
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from bot.dates import fmt_date, parse_date
 from bot.db import User
 from bot.keyboards.inline import (
     card_keyboard,
@@ -80,6 +82,14 @@ async def _names_for_ids(session: AsyncSession, ids: list[int]) -> list[str]:
     return [rows.get(i, str(i)) for i in ids]
 
 
+def _cancel_kb(i18n: I18nContext):
+    """A single 'Back' button that re-renders the card and clears the input
+    state — so text-input prompts (title/desc/due/comment) are never a dead end."""
+    kb = InlineKeyboardBuilder()
+    kb.button(text=i18n.get("nav-back"), callback_data="act:refresh")
+    return kb.as_markup()
+
+
 def _comment_author(c: dict) -> str:
     user = c.get("user") or {}
     if user.get("name"):
@@ -107,7 +117,7 @@ def _format_card(
         f"{i18n.get('card-f-priority')}: {issue.get('priorityLabel') or '—'}",
         f"{i18n.get('card-f-project')}: {html.escape((issue.get('project') or {}).get('name', '—'))} · "
         f"{i18n.get('card-f-assignee')}: {html.escape(assignee)}",
-        f"{i18n.get('card-f-due')}: {issue.get('dueDate') or '—'}",
+        f"{i18n.get('card-f-due')}: {fmt_date(issue.get('dueDate'))}",
     ]
     if other_labels:
         lines.append(i18n.get("card-f-labels") + ": " + ", ".join(html.escape(x) for x in other_labels))
@@ -298,14 +308,14 @@ async def edit_menu(
 @router.callback_query(F.data == "ed:title")
 async def edit_title(call: CallbackQuery, state: FSMContext, i18n: I18nContext) -> None:
     await state.set_state(Card.waiting_title)
-    await call.message.answer(i18n.get("edit-send-title"))
+    await call.message.answer(i18n.get("edit-send-title"), reply_markup=_cancel_kb(i18n))
     await call.answer()
 
 
 @router.callback_query(F.data == "ed:desc")
 async def edit_desc(call: CallbackQuery, state: FSMContext, i18n: I18nContext) -> None:
     await state.set_state(Card.waiting_desc)
-    await call.message.answer(i18n.get("edit-send-desc"))
+    await call.message.answer(i18n.get("edit-send-desc"), reply_markup=_cancel_kb(i18n))
     await call.answer()
 
 
@@ -406,7 +416,7 @@ async def set_due(
     raw = call.data.split(":", 1)[1]
     if raw == "custom":
         await state.set_state(Card.waiting_due)
-        await call.message.answer(i18n.get("due-prompt"))
+        await call.message.answer(i18n.get("due-prompt"), reply_markup=_cancel_kb(i18n))
         await call.answer()
         return
     value = None if raw == "none" else (date.today() + timedelta(days=int(raw))).isoformat()
@@ -414,17 +424,6 @@ async def set_due(
     await client.update_issue(issue_id, dueDate=value)
     await _render(call=call, message=None, issue_id=issue_id, user=user, session=session, state=state, i18n=i18n, client=client)
     await call.answer(i18n.get("toast-saved"))
-
-
-def _parse_date(text: str) -> str | None:
-    """Accepts YYYY-MM-DD or DD.MM.YYYY; returns ISO date string or None."""
-    text = (text or "").strip()
-    for fmt in ("%Y-%m-%d", "%d.%m.%Y", "%d.%m.%y"):
-        try:
-            return datetime.strptime(text, fmt).date().isoformat()
-        except ValueError:
-            continue
-    return None
 
 
 @router.message(Card.waiting_due)
@@ -435,7 +434,7 @@ async def due_received(
     if not issue_id or not await can_manage_task(session, user, project_id):
         await message.answer(i18n.get("err-no-permission"))
         return
-    iso = _parse_date(message.text or "")
+    iso = parse_date(message.text or "")
     if iso is None:
         await message.answer(i18n.get("due-invalid"))
         return
@@ -627,7 +626,7 @@ async def start_comment(
         return
     # Anyone can comment.
     await state.set_state(Card.waiting_comment)
-    await call.message.answer(i18n.get("comment-prompt"))
+    await call.message.answer(i18n.get("comment-prompt"), reply_markup=_cancel_kb(i18n))
     await call.answer()
 
 

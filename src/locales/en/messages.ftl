@@ -133,8 +133,8 @@ sub-off = 🔕 Unsubscribed
 sub-other-done = Subscribed: { $name }
 sub-added-dm = 🔔 You were subscribed to task { $identifier } (by { $by })
 toast-saved = Saved
-due-prompt = Send a date as YYYY-MM-DD or DD.MM.YYYY (e.g. 2026-06-30).
-due-invalid = Couldn't parse the date. Use YYYY-MM-DD or DD.MM.YYYY.
+due-prompt = Send a date as DD.MM.YYYY (e.g. 30.06.2026).
+due-invalid = Couldn't parse the date. Use DD.MM.YYYY (e.g. 30.06.2026).
 edit-send-title = Send the new title.
 edit-send-desc = Send the new description.
 

@@ -13,7 +13,7 @@ so they never collide with the live-card editor in card.py.
 from __future__ import annotations
 
 import html
-from datetime import date, datetime, timedelta
+from datetime import date, timedelta
 
 from aiogram import Bot, F, Router
 from aiogram.fsm.context import FSMContext
@@ -23,6 +23,7 @@ from aiogram_i18n import I18nContext
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from bot.dates import fmt_date, parse_date
 from bot.db import IssueLink, User
 from bot.keyboards.inline import (
     PRIORITIES,
@@ -178,7 +179,7 @@ async def _build_preview(session: AsyncSession, state: FSMContext, i18n: I18nCon
         desc = desc[:DESC_PREVIEW_MAX] + "…"
     prio = data.get("draft_priority")
     prio_label = _PRIO_LABELS.get(prio) if prio is not None else "—"
-    due = data.get("draft_due") or "—"
+    due = fmt_date(data.get("draft_due"))
     status = data.get("draft_state_name") or "—"
     label_names = data.get("draft_label_names") or {}
     label_ids = data.get("draft_label_ids") or []
@@ -411,21 +412,11 @@ async def draft_set_due(
     await call.answer(i18n.get("toast-saved"))
 
 
-def _parse_date(text: str) -> str | None:
-    text = (text or "").strip()
-    for fmt in ("%Y-%m-%d", "%d.%m.%Y", "%d.%m.%y"):
-        try:
-            return datetime.strptime(text, fmt).date().isoformat()
-        except ValueError:
-            continue
-    return None
-
-
 @router.message(DraftTask.waiting_due)
 async def draft_due_received(
     message: Message, session: AsyncSession, state: FSMContext, i18n: I18nContext
 ) -> None:
-    iso = _parse_date(message.text or "")
+    iso = parse_date(message.text or "")
     if iso is None:
         await message.answer(i18n.get("due-invalid"))
         return
