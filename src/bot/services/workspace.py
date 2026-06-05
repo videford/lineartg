@@ -13,8 +13,11 @@ class WorkspaceNotConnected(RuntimeError):
 
 async def get_token(session: AsyncSession) -> OAuthToken:
     """MVP assumes a single connected workspace. Multi-workspace support would
-    key this by chat/team binding instead."""
-    token = await session.scalar(select(OAuthToken).limit(1))
+    key this by chat/team binding instead. Prefer the most recently refreshed
+    token so a stale row from an earlier install is never picked."""
+    token = await session.scalar(
+        select(OAuthToken).order_by(OAuthToken.updated_at.desc()).limit(1)
+    )
     if token is None:
         raise WorkspaceNotConnected
     return token
