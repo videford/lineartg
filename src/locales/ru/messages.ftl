@@ -39,6 +39,19 @@ task-send-title = Отправьте текст задачи одним сооб
 task-send-title-seeded = Отправьте текст задачи (или перешлите исходное сообщение ещё раз).
 task-created = ✅ Создана задача { $identifier }: { $url }
 
+draft-title = 🆕 Черновик задачи
+draft-send-title = Напишите название задачи одним сообщением.
+draft-send-desc = Напишите описание задачи (или нажмите «Пропустить»).
+draft-desc-skip = ⏭ Пропустить
+draft-f-title = Название
+draft-f-desc = Описание
+draft-btn-assignee = 👤 Исполнитель
+draft-btn-sub = 🔔 Подписать
+draft-btn-publish = ✅ Опубликовать
+draft-btn-cancel = ❌ Отмена
+draft-hint = Проверьте поля и нажмите «Опубликовать».
+draft-canceled = Создание задачи отменено.
+
 assign-choose-member = Кому назначить?
 assign-dm-failed = Не удалось отправить ЛС пользователю { $name } — пусть откроет бота через /start.
 assigned-dm = 📌 Вам назначена задача { $identifier }: { $title } (назначил: { $by })

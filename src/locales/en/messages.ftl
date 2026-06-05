@@ -39,6 +39,19 @@ task-send-title = Send the task text in one message.
 task-send-title-seeded = Send the task text (or forward the original message again).
 task-created = ✅ Created task { $identifier }: { $url }
 
+draft-title = 🆕 Task draft
+draft-send-title = Send the task title in one message.
+draft-send-desc = Send a description (or tap “Skip”).
+draft-desc-skip = ⏭ Skip
+draft-f-title = Title
+draft-f-desc = Description
+draft-btn-assignee = 👤 Assignee
+draft-btn-sub = 🔔 Subscribe
+draft-btn-publish = ✅ Publish
+draft-btn-cancel = ❌ Cancel
+draft-hint = Review the fields and tap “Publish”.
+draft-canceled = Task creation canceled.
+
 assign-choose-member = Assign to whom?
 assign-dm-failed = Couldn't DM { $name } — ask them to open the bot via /start.
 assigned-dm = 📌 You've been assigned task { $identifier }: { $title } (by { $by })

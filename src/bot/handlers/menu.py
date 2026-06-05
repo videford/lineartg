@@ -16,8 +16,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from bot.db import Role, User
 from bot.handlers import admin as admin_h
-from bot.handlers import assign as assign_h
 from bot.handlers import browse as browse_h
+from bot.handlers import draft as draft_h
 from bot.handlers import my as my_h
 from bot.handlers import people as people_h
 from bot.handlers import tasklist
@@ -92,9 +92,10 @@ async def btn_my(
 async def btn_create(
     message: Message, user: User, session: AsyncSession, state: FSMContext, i18n: I18nContext
 ) -> None:
-    # Creating a task always goes through assignment — no orphan tasks.
+    # Creating a task goes through the draft preview — no orphan tasks: nothing
+    # is created in Linear until the user reviews the card and presses Publish.
     await state.clear()
-    await assign_h.cmd_assign(message, user, session, state, i18n)
+    await draft_h.start_draft(message, user, session, state, i18n)
 
 
 @router.message(F.chat.type == "private", F.text.startswith(EMOJI_BROWSE))

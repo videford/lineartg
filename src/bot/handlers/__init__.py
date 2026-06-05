@@ -6,6 +6,7 @@ from bot.handlers import (
     board,
     browse,
     card,
+    draft,
     menu,
     my,
     people,
@@ -20,6 +21,7 @@ def build_router() -> Router:
     root.include_router(start.router)
     root.include_router(admin.router)
     root.include_router(assign.router)
+    root.include_router(draft.router)
     root.include_router(card.router)
     root.include_router(team.router)
     root.include_router(tasklist.router)

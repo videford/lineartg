@@ -35,6 +35,18 @@ class CommentTask(StatesGroup):
     waiting_text = State()
 
 
+class DraftTask(StatesGroup):
+    """Draft task creation: collect title + description, then a preview card
+    where due/priority/assignee/subscribers are set before publishing. Nothing
+    is created in Linear until the user presses Publish — no accidental tasks."""
+
+    waiting_project = State()
+    waiting_title = State()
+    waiting_desc = State()
+    waiting_due = State()
+    preview = State()
+
+
 class Card(StatesGroup):
     """Active task-card editing. The card's issue_id is kept in FSM data
     (`card_issue`) so action callbacks stay within Telegram's 64-byte limit."""

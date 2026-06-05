@@ -129,16 +129,18 @@ async def board_who(call: CallbackQuery, session: AsyncSession, i18n: I18nContex
     issues = await _issues(session)
     names = await _label_map(session)
     started = [i for i in issues if (i.get("state") or {}).get("type") == "started"]
-    by_owner: dict[str, list[str]] = {}
+    by_owner: dict[str, list[dict]] = {}
     for i in started:
-        for lb in _owner_labels(i) or ["—"]:
-            by_owner.setdefault(names.get(lb, lb), []).append(i["identifier"])
+        # Only assigned tasks here — unassigned ones live in "Без исполнителя".
+        for lb in _owner_labels(i):
+            by_owner.setdefault(names.get(lb, lb), []).append(i)
 
     lines = [f"<b>{i18n.get('board-who')}</b>"]
     if not by_owner:
         lines.append(i18n.get("board-empty"))
-    for who, ids in sorted(by_owner.items()):
-        lines.append(f"• <b>{html.escape(who)}</b>: {', '.join(ids)}")
+    for who, tasks in sorted(by_owner.items()):
+        lines.append(f"• <b>{html.escape(who)}</b>:")
+        lines += [f"   {_short(t)}" for t in tasks]
     await call.message.edit_text("\n".join(lines), reply_markup=_kb(i18n))
     await call.answer()
 

@@ -140,6 +140,42 @@ def due_keyboard(i18n) -> InlineKeyboardMarkup:
     return kb.as_markup()
 
 
+def draft_preview_keyboard(i18n) -> InlineKeyboardMarkup:
+    kb = InlineKeyboardBuilder()
+    kb.button(text=i18n.get("btn-title"), callback_data="dft:title")
+    kb.button(text=i18n.get("btn-desc"), callback_data="dft:desc")
+    kb.button(text=i18n.get("btn-priority"), callback_data="dft:prio")
+    kb.button(text=i18n.get("btn-due"), callback_data="dft:due")
+    kb.button(text=i18n.get("draft-btn-assignee"), callback_data="dft:asg")
+    kb.button(text=i18n.get("draft-btn-sub"), callback_data="dft:sub")
+    kb.button(text=i18n.get("draft-btn-publish"), callback_data="dft:publish")
+    kb.button(text=i18n.get("draft-btn-cancel"), callback_data="dft:cancel")
+    kb.adjust(2, 2, 2, 1, 1)
+    return kb.as_markup()
+
+
+def draft_priority_keyboard(i18n) -> InlineKeyboardMarkup:
+    kb = InlineKeyboardBuilder()
+    for value, label in PRIORITIES:
+        kb.button(text=label, callback_data=f"dpr:{value}")
+    kb.button(text=i18n.get("nav-back"), callback_data="dft:back")
+    kb.adjust(2)
+    return kb.as_markup()
+
+
+def draft_due_keyboard(i18n) -> InlineKeyboardMarkup:
+    kb = InlineKeyboardBuilder()
+    kb.button(text=i18n.get("due-today"), callback_data="ddu:0")
+    kb.button(text=i18n.get("due-tomorrow"), callback_data="ddu:1")
+    kb.button(text=i18n.get("due-3d"), callback_data="ddu:3")
+    kb.button(text=i18n.get("due-7d"), callback_data="ddu:7")
+    kb.button(text=i18n.get("due-custom-btn"), callback_data="ddu:custom")
+    kb.button(text=i18n.get("btn-clear"), callback_data="ddu:none")
+    kb.button(text=i18n.get("nav-back"), callback_data="dft:back")
+    kb.adjust(2)
+    return kb.as_markup()
+
+
 def labels_keyboard(i18n, labels: list[dict], selected: set[str]) -> InlineKeyboardMarkup:
     """Owner labels (prefix tg:) are managed via Assign, so hidden here."""
     kb = InlineKeyboardBuilder()

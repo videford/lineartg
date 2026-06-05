@@ -39,6 +39,19 @@ task-send-title = Vazifa matnini bitta xabarda yuboring.
 task-send-title-seeded = Vazifa matnini yuboring (yoki asl xabarni qayta yuboring).
 task-created = ✅ Vazifa yaratildi { $identifier }: { $url }
 
+draft-title = 🆕 Vazifa qoralamasi
+draft-send-title = Vazifa nomini bitta xabarda yuboring.
+draft-send-desc = Tavsif yuboring (yoki «Oʻtkazib yuborish» tugmasini bosing).
+draft-desc-skip = ⏭ Oʻtkazib yuborish
+draft-f-title = Nomi
+draft-f-desc = Tavsif
+draft-btn-assignee = 👤 Ijrochi
+draft-btn-sub = 🔔 Obuna qilish
+draft-btn-publish = ✅ Eʼlon qilish
+draft-btn-cancel = ❌ Bekor qilish
+draft-hint = Maydonlarni tekshiring va «Eʼlon qilish» tugmasini bosing.
+draft-canceled = Vazifa yaratish bekor qilindi.
+
 assign-choose-member = Kimga biriktirilsin?
 assign-dm-failed = { $name }ga shaxsiy xabar yuborilmadi — u /start orqali botni ochsin.
 assigned-dm = 📌 Sizga vazifa biriktirildi { $identifier }: { $title } (biriktirdi: { $by })
