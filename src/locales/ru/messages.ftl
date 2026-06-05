@@ -167,6 +167,7 @@ people-title = Участники компании ({ $n }):
 people-current = Сейчас в работе:
 people-recent = Недавно завершено:
 people-following = Подписан:
+people-linear-unavailable = ⚠️ Данные Linear недоступны (нужно переподключить через /connect).
 
 # browse all tasks
 browse-no-projects = Проекты ещё не загружены. Обратитесь к администратору.

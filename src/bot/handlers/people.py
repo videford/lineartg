@@ -6,6 +6,7 @@ from __future__ import annotations
 
 import html
 
+import httpx
 from aiogram import F, Router
 from aiogram.fsm.context import FSMContext
 from aiogram.types import CallbackQuery, Message
@@ -77,28 +78,34 @@ async def people_profile(
 
     try:
         client = await workspace.get_client(session)
-    except workspace.WorkspaceNotConnected:
-        await call.message.edit_text("\n".join(lines))
+        own = await client.issues_by_label(target.linear_label) if target.linear_label else []
+        current = [i for i in own if (i.get("state") or {}).get("type") == "started"]
+
+        # Followed-but-not-owner: subscriptions where target isn't the assignee.
+        followed: list[dict] = []
+        for issue_id in (await subscriptions_of(session, tg_id))[:MAX_SUBS]:
+            issue = await client.get_issue(issue_id)
+            if not issue:
+                continue
+            owner_labels = [
+                lb["name"]
+                for lb in (issue.get("labels") or {}).get("nodes", [])
+                if lb["name"].startswith(OWNER_PREFIX)
+            ]
+            if target.linear_label and target.linear_label in owner_labels:
+                continue
+            followed.append(issue)
+    except (workspace.WorkspaceNotConnected, httpx.HTTPError):
+        # Linear unreachable or token expired/revoked — show profile basics only.
+        lines.append("─────────")
+        lines.append(i18n.get("people-linear-unavailable"))
+        kb = InlineKeyboardBuilder()
+        kb.button(text=i18n.get("nav-back"), callback_data="ppl:list")
+        await call.message.edit_text(
+            "\n".join(lines), reply_markup=kb.as_markup(), disable_web_page_preview=True
+        )
         await call.answer()
         return
-
-    own = await client.issues_by_label(target.linear_label) if target.linear_label else []
-    current = [i for i in own if (i.get("state") or {}).get("type") == "started"]
-
-    # Followed-but-not-owner: subscriptions where target isn't the assignee.
-    followed: list[dict] = []
-    for issue_id in (await subscriptions_of(session, tg_id))[:MAX_SUBS]:
-        issue = await client.get_issue(issue_id)
-        if not issue:
-            continue
-        owner_labels = [
-            lb["name"]
-            for lb in (issue.get("labels") or {}).get("nodes", [])
-            if lb["name"].startswith(OWNER_PREFIX)
-        ]
-        if target.linear_label and target.linear_label in owner_labels:
-            continue
-        followed.append(issue)
 
     lines.append("─────────")
     lines.append("<b>" + i18n.get("people-current") + "</b>")
