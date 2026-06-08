@@ -18,7 +18,7 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from bot.dates import fmt_date, parse_date
-from bot.db import User
+from bot.db import Role, User
 from bot.keyboards.inline import (
     card_keyboard,
     due_keyboard,
@@ -32,7 +32,7 @@ from bot.keyboards.inline import (
 from bot.linear import LinearClient
 from bot.middlewares.i18n import SUPPORTED_LOCALES
 from bot.services import workspace
-from bot.services.permissions import can_manage_task
+from bot.services.permissions import can_manage_task, can_set_status
 from bot.services.projects import is_project_team, project_team
 from bot.services.subscriptions import (
     is_subscribed,
@@ -162,7 +162,8 @@ async def _render(
 
     project_id = (issue.get("project") or {}).get("id")
     manage = await can_manage_task(session, user, project_id)
-    # Anyone can view a card, comment and subscribe; only managers edit/status/assign.
+    # Guests are read-only (view + follow). Members can comment and move their own
+    # tasks; only managers edit/assign.
 
     # update_data (not set_data) so a list view's context survives opening a card.
     await state.update_data(
@@ -181,9 +182,10 @@ async def _render(
     owner_names = await _resolve_owner_names(session, issue)
     subscriber_names = await _names_for_ids(session, await subscriber_ids(session, issue_id))
     text = _format_card(issue, owner_names, subscriber_names, i18n)
+    is_guest = user.role == Role.guest
     kb = card_keyboard(
-        i18n, issue["url"], can_manage=manage, can_comment=True,
-        subscribed=subscribed, is_owner=is_owner,
+        i18n, issue["url"], can_manage=manage, can_status=manage or is_owner,
+        can_comment=not is_guest, subscribed=subscribed, is_owner=is_owner,
     )
     target = call.message if call is not None else message
     silent = target.chat.type != "private"  # don't ping the whole group
@@ -221,6 +223,17 @@ async def _guard_manage(
     call: CallbackQuery, session: AsyncSession, user: User, project_id: str | None, i18n
 ) -> bool:
     if await can_manage_task(session, user, project_id):
+        return True
+    await call.answer(i18n.get("err-no-permission"), show_alert=True)
+    return False
+
+
+async def _guard_status(
+    call: CallbackQuery, session: AsyncSession, user: User, project_id: str | None,
+    issue: dict, i18n
+) -> bool:
+    """Status may be set by a manager or by the task's own assignee."""
+    if await can_set_status(session, user, project_id, _owner_labels(issue)):
         return True
     await call.answer(i18n.get("err-no-permission"), show_alert=True)
     return False
@@ -267,9 +280,13 @@ async def show_status(
     call: CallbackQuery, user: User, session: AsyncSession, state: FSMContext, i18n: I18nContext
 ) -> None:
     issue_id, team_id, project_id = await _active(state)
-    if not issue_id or not await _guard_manage(call, session, user, project_id, i18n):
+    if not issue_id:
+        await call.answer()
         return
     client = await workspace.get_client(session)
+    issue = await client.get_issue(issue_id)
+    if issue is None or not await _guard_status(call, session, user, project_id, issue, i18n):
+        return
     states = await client.workflow_states(team_id)
     # Hide the "Duplicate" state — it's a Linear-specific cancellation reason.
     states = [s for s in states if s["name"].lower() != "duplicate"]
@@ -282,10 +299,14 @@ async def set_status(
     call: CallbackQuery, user: User, session: AsyncSession, state: FSMContext, i18n: I18nContext
 ) -> None:
     issue_id, _, project_id = await _active(state)
-    if not issue_id or not await _guard_manage(call, session, user, project_id, i18n):
+    if not issue_id:
+        await call.answer()
+        return
+    client = await workspace.get_client(session)
+    issue = await client.get_issue(issue_id)
+    if issue is None or not await _guard_status(call, session, user, project_id, issue, i18n):
         return
     state_id = call.data.split(":", 1)[1]
-    client = await workspace.get_client(session)
     await client.update_issue_state(issue_id, state_id)
     await _render(call=call, message=None, issue_id=issue_id, user=user, session=session, state=state, i18n=i18n, client=client)
     await call.answer(i18n.get("toast-saved"))
@@ -624,7 +645,10 @@ async def start_comment(
     if not issue_id:
         await call.answer()
         return
-    # Anyone can comment.
+    # Members/leads/admins can comment; guests are read-only.
+    if user.role == Role.guest:
+        await call.answer(i18n.get("err-no-permission"), show_alert=True)
+        return
     await state.set_state(Card.waiting_comment)
     await call.message.answer(i18n.get("comment-prompt"), reply_markup=_cancel_kb(i18n))
     await call.answer()
@@ -635,7 +659,7 @@ async def comment_received(
     message: Message, user: User, session: AsyncSession, state: FSMContext, i18n: I18nContext
 ) -> None:
     issue_id, _, _ = await _active(state)
-    if not issue_id:
+    if not issue_id or user.role == Role.guest:
         return
     client = await workspace.get_client(session)
     # Prefix the author so it's clear in Linear who wrote the comment, even when

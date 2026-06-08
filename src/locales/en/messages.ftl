@@ -8,6 +8,7 @@ whoami = You are: { $name }
 status-admin = 👑 Admin (full access)
 status-lead = ⭐ Lead of: { $projects }
 status-member = 👤 Member
+status-guest = ⏳ Guest (awaiting admin approval)
 profile-card = 👤 Profile
     Name: { $name }
     Status: { $status }
@@ -51,6 +52,9 @@ draft-btn-publish = ✅ Publish
 draft-btn-cancel = ❌ Cancel
 draft-hint = Review the fields and tap “Publish”.
 draft-canceled = Task creation canceled.
+draft-no-projects = You can't create tasks yet. Ask an admin to add you to a project.
+draft-assign-self = 👤 Assign to me
+admin-new-user = 🆕 New user { $name } is awaiting approval. Open "Management" → "Roles" to grant access.
 
 assign-choose-member = Assign to whom?
 assign-dm-failed = Couldn't DM { $name } — ask them to open the bot via /start.

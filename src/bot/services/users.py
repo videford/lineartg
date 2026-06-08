@@ -30,7 +30,8 @@ async def get_or_create_user(
 ) -> User:
     user = await session.get(User, telegram_id)
     if user is None:
-        role = Role.admin if telegram_id in settings.admin_ids else Role.member
+        # New users start as guests (read-only) until an admin approves them.
+        role = Role.admin if telegram_id in settings.admin_ids else Role.guest
         user = User(
             telegram_id=telegram_id,
             display_name=display_name,

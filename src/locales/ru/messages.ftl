@@ -8,6 +8,7 @@ whoami = Вы: { $name }
 status-admin = 👑 Администратор (полный доступ)
 status-lead = ⭐ Лид проектов: { $projects }
 status-member = 👤 Участник
+status-guest = ⏳ Гость (ожидает подтверждения админом)
 profile-card = 👤 Профиль
     Имя: { $name }
     Статус: { $status }
@@ -51,6 +52,9 @@ draft-btn-publish = ✅ Опубликовать
 draft-btn-cancel = ❌ Отмена
 draft-hint = Проверьте поля и нажмите «Опубликовать».
 draft-canceled = Создание задачи отменено.
+draft-no-projects = Вы пока не можете создавать задачи. Попросите администратора добавить вас в проект.
+draft-assign-self = 👤 Назначить себе
+admin-new-user = 🆕 Новый пользователь { $name } ожидает подтверждения. Откройте «Управление» → «Роли», чтобы выдать доступ.
 
 assign-choose-member = Кому назначить?
 assign-dm-failed = Не удалось отправить ЛС пользователю { $name } — пусть откроет бота через /start.

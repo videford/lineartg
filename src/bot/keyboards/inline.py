@@ -64,11 +64,15 @@ def open_card_button(issue_id: str, *, new: bool = False) -> InlineKeyboardMarku
 
 
 def card_keyboard(
-    i18n, url: str, *, can_manage: bool, can_comment: bool, subscribed: bool, is_owner: bool = False
+    i18n, url: str, *, can_manage: bool, can_status: bool = False, can_comment: bool,
+    subscribed: bool, is_owner: bool = False
 ) -> InlineKeyboardMarkup:
     kb = InlineKeyboardBuilder()
-    if can_manage:
+    # Status can be changed by managers OR the task's own assignee (a member
+    # moving their own task forward); edit/assign stay manager-only.
+    if can_status or can_manage:
         kb.button(text=i18n.get("btn-status"), callback_data="act:status")
+    if can_manage:
         kb.button(text=i18n.get("btn-edit"), callback_data="act:edit")
         kb.button(text=i18n.get("btn-assign"), callback_data="act:assign")
     if can_comment:

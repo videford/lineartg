@@ -34,8 +34,8 @@ from bot.keyboards.inline import (
 )
 from bot.middlewares.i18n import SUPPORTED_LOCALES
 from bot.services import workspace
-from bot.services.permissions import can_create_in
-from bot.services.projects import get_project, manageable_projects, project_team
+from bot.services.permissions import can_create_in, can_manage_task
+from bot.services.projects import creatable_projects, get_project, project_team
 from bot.services.subscriptions import subscribe
 from bot.states import DraftTask
 
@@ -75,9 +75,9 @@ async def start_draft(
     except workspace.WorkspaceNotConnected:
         await message.answer(i18n.get("err-no-workspace"))
         return
-    projects = await manageable_projects(session, user)
+    projects = await creatable_projects(session, user)
     if not projects:
-        await message.answer(i18n.get("err-no-permission"))
+        await message.answer(i18n.get("draft-no-projects"))
         return
     await state.clear()
     await state.set_state(DraftTask.waiting_project)
@@ -429,17 +429,24 @@ async def draft_due_received(
 
 @router.callback_query(F.data == "dft:asg")
 async def draft_show_assignee(
-    call: CallbackQuery, session: AsyncSession, state: FSMContext, i18n: I18nContext
+    call: CallbackQuery, user: User, session: AsyncSession, state: FSMContext, i18n: I18nContext
 ) -> None:
     data = await state.get_data()
-    team = await project_team(session, data.get("draft_project_id"))
-    if not team:
-        await call.answer(i18n.get("assign-no-team"), show_alert=True)
-        return
+    project_id = data.get("draft_project_id")
     kb = InlineKeyboardBuilder()
-    for m in team:
-        kb.button(text=m.display_name, callback_data=f"dasg:{m.telegram_id}")
-    kb.adjust(2)
+    # Members may only assign the task to themselves or leave it unassigned;
+    # leads/admins get the full team picker.
+    if await can_manage_task(session, user, project_id):
+        team = await project_team(session, project_id)
+        if not team:
+            await call.answer(i18n.get("assign-no-team"), show_alert=True)
+            return
+        for m in team:
+            kb.button(text=m.display_name, callback_data=f"dasg:{m.telegram_id}")
+        kb.adjust(2)
+    else:
+        kb.button(text=i18n.get("draft-assign-self"), callback_data=f"dasg:{user.telegram_id}")
+        kb.adjust(1)
     kb.row(InlineKeyboardButton(text=i18n.get("assign-none"), callback_data="dasg:none"))
     kb.row(InlineKeyboardButton(text=i18n.get("nav-back"), callback_data="dft:back"))
     await call.message.edit_reply_markup(reply_markup=kb.as_markup())

@@ -5,9 +5,11 @@ from aiogram.filters import Command, CommandStart
 from aiogram.fsm.context import FSMContext
 from aiogram.types import CallbackQuery, Message, ReplyKeyboardRemove
 from aiogram_i18n import I18nContext
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from bot.db import User
+from bot.config import settings
+from bot.db import Role, User
 from bot.keyboards.inline import lang_keyboard
 from bot.keyboards.menu import main_menu
 from bot.middlewares.i18n import SUPPORTED_LOCALES
@@ -90,6 +92,28 @@ async def reg_name_received(
     await message.answer(i18n.get("reg-done", name=raw))
     await _show_main(message, user, session, i18n)
 
+    # New users are guests — let admins know there's someone to approve.
+    if user.role == Role.guest:
+        await _notify_admins_new_user(message, session, i18n, user)
+
+
+async def _notify_admins_new_user(
+    message: Message, session: AsyncSession, i18n: I18nContext, new_user: User
+) -> None:
+    admin_ids = {
+        a.telegram_id
+        for a in await session.scalars(select(User).where(User.role == Role.admin))
+    } | set(settings.admin_ids)
+    for tg_id in admin_ids:
+        target = await session.get(User, tg_id)
+        lang = target.lang if target and target.lang in SUPPORTED_LOCALES else None
+        try:
+            await message.bot.send_message(
+                tg_id, i18n.get("admin-new-user", lang, name=new_user.display_name)
+            )
+        except Exception:  # noqa: BLE001 — admin hasn't opened the bot, etc.
+            pass
+
 
 async def _show_main(
     message: Message, user: User, session: AsyncSession, i18n: I18nContext
@@ -99,7 +123,9 @@ async def _show_main(
     status = await describe_status(session, user, i18n)
     await message.answer(
         i18n.get("start-welcome", name=user.display_name, status=status),
-        reply_markup=main_menu(i18n, is_admin=is_admin, is_lead=is_lead),
+        reply_markup=main_menu(
+            i18n, is_admin=is_admin, is_lead=is_lead, is_guest=user.role == Role.guest
+        ),
     )
 
 
@@ -120,7 +146,9 @@ async def set_lang(
     is_lead = await is_any_lead(session, user.telegram_id)
     await call.message.answer(
         i18n.get("menu-title"),
-        reply_markup=main_menu(i18n, is_admin=is_admin, is_lead=is_lead),
+        reply_markup=main_menu(
+            i18n, is_admin=is_admin, is_lead=is_lead, is_guest=user.role == Role.guest
+        ),
     )
     await call.answer()
 

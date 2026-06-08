@@ -25,7 +25,8 @@ class Role(str, enum.Enum):
     """Bot-level role. Independent from Linear's own permissions —
     rank-and-file members have no Linear account at all."""
 
-    member = "member"
+    guest = "guest"    # just started the bot; read-only until an admin approves
+    member = "member"  # approved; can create tasks and manage their own tasks
     lead = "lead"
     admin = "admin"  # PM / workspace owner
 

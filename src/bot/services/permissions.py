@@ -69,7 +69,25 @@ async def can_manage_task(
 
 
 async def can_create_in(session: AsyncSession, user: User, project_id: str) -> bool:
-    return await can_manage_task(session, user, project_id)
+    """Create a task in a project: admins anywhere; leads/members in projects they
+    belong to. Guests cannot create anything."""
+    if user.role == Role.guest:
+        return False
+    if is_admin(user):
+        return True
+    from bot.services.projects import is_project_team
+
+    return await is_project_team(session, user.telegram_id, project_id or "")
+
+
+async def can_set_status(
+    session: AsyncSession, user: User, project_id: str | None, owner_labels: list[str]
+) -> bool:
+    """Change a task's workflow state: admins/leads (manage) or the task's own
+    assignee (a member moving their own task forward)."""
+    if await can_manage_task(session, user, project_id):
+        return True
+    return is_owner_of(user, owner_labels)
 
 
 async def can_comment(

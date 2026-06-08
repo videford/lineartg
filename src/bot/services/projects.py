@@ -145,6 +145,40 @@ async def remove_project_member(
         await session.commit()
 
 
+async def creatable_projects(session: AsyncSession, user: User) -> list[Project]:
+    """Projects the user may create tasks in: all for admin; for leads/members the
+    projects they belong to (as member or lead). Guests get none."""
+    from bot.db import Role
+
+    if user.role == Role.guest:
+        return []
+    if user.role == Role.admin:
+        return await list_projects(session)
+    ids = set(
+        await session.scalars(
+            select(ProjectMember.project_id).where(
+                ProjectMember.telegram_id == user.telegram_id
+            )
+        )
+    )
+    ids |= set(
+        await session.scalars(
+            select(ProjectLead.project_id).where(
+                ProjectLead.telegram_id == user.telegram_id
+            )
+        )
+    )
+    if not ids:
+        return []
+    return list(
+        await session.scalars(
+            select(Project)
+            .where(Project.id.in_(ids), Project.is_active.is_(True))
+            .order_by(Project.name)
+        )
+    )
+
+
 async def manageable_projects(session: AsyncSession, user: User) -> list[Project]:
     """Projects the user may create/manage in: all for admin, led ones for leads."""
     from bot.db import Role

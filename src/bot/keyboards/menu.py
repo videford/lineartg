@@ -17,7 +17,9 @@ EMOJI_BROWSE = "🗂"
 EMOJI_PEOPLE = "👥"
 
 
-def main_menu(i18n, *, is_admin: bool, is_lead: bool) -> ReplyKeyboardMarkup:
+def main_menu(
+    i18n, *, is_admin: bool, is_lead: bool, is_guest: bool = False
+) -> ReplyKeyboardMarkup:
     can_manage = is_admin or is_lead
     if can_manage:
         rows = [
@@ -28,11 +30,19 @@ def main_menu(i18n, *, is_admin: bool, is_lead: bool) -> ReplyKeyboardMarkup:
         ]
         if is_admin:
             rows.append([KeyboardButton(text=i18n.get("menu-admin"))])
-    else:
+    elif is_guest:
+        # Guests are read-only — no Create button until an admin approves them.
         rows = [
             [KeyboardButton(text=i18n.get("menu-my")), KeyboardButton(text=i18n.get("menu-search"))],
             [KeyboardButton(text=i18n.get("menu-browse")), KeyboardButton(text=i18n.get("menu-people"))],
             [KeyboardButton(text=i18n.get("menu-settings"))],
+        ]
+    else:
+        # Approved members may create tasks (assigned to themselves or unassigned).
+        rows = [
+            [KeyboardButton(text=i18n.get("menu-my")), KeyboardButton(text=i18n.get("menu-create"))],
+            [KeyboardButton(text=i18n.get("menu-search")), KeyboardButton(text=i18n.get("menu-browse"))],
+            [KeyboardButton(text=i18n.get("menu-people")), KeyboardButton(text=i18n.get("menu-settings"))],
         ]
     return ReplyKeyboardMarkup(keyboard=rows, resize_keyboard=True, is_persistent=True)
 

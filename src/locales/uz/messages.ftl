@@ -8,6 +8,7 @@ whoami = Siz: { $name }
 status-admin = 👑 Administrator (toʻliq huquq)
 status-lead = ⭐ Loyiha lideri: { $projects }
 status-member = 👤 Aʼzo
+status-guest = ⏳ Mehmon (admin tasdiqlashini kutmoqda)
 profile-card = 👤 Profil
     Ism: { $name }
     Holat: { $status }
@@ -51,6 +52,9 @@ draft-btn-publish = ✅ Eʼlon qilish
 draft-btn-cancel = ❌ Bekor qilish
 draft-hint = Maydonlarni tekshiring va «Eʼlon qilish» tugmasini bosing.
 draft-canceled = Vazifa yaratish bekor qilindi.
+draft-no-projects = Siz hali vazifa yarata olmaysiz. Administratordan sizni loyihaga qoʻshishini soʻrang.
+draft-assign-self = 👤 Oʻzimga biriktirish
+admin-new-user = 🆕 Yangi foydalanuvchi { $name } tasdiqlashni kutmoqda. Ruxsat berish uchun «Boshqaruv» → «Rollar»ni oching.
 
 assign-choose-member = Kimga biriktirilsin?
 assign-dm-failed = { $name }ga shaxsiy xabar yuborilmadi — u /start orqali botni ochsin.

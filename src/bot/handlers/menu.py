@@ -63,7 +63,9 @@ async def show_menu(message: Message, user: User, session: AsyncSession, i18n: I
     is_lead = await is_any_lead(session, user.telegram_id)
     await message.answer(
         i18n.get("menu-title"),
-        reply_markup=main_menu(i18n, is_admin=is_admin, is_lead=is_lead),
+        reply_markup=main_menu(
+            i18n, is_admin=is_admin, is_lead=is_lead, is_guest=user.role == Role.guest
+        ),
     )
 
 
