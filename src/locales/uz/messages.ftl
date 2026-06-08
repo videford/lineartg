@@ -217,6 +217,12 @@ admin-setlead = 👑 Lider tayinlash
 admin-leads = 📜 Liderlar roʻyxati
 admin-roles = 👑 Rollar
 admin-groups = 🔔 Guruh eʼlonlari
+admin-remove-user = 🗑 Foydalanuvchini oʻchirish
+
+rmuser-choose = Botdan kimni oʻchiramiz?
+rmuser-confirm = { $name } botdan oʻchirilsinmi? Uning rollari, loyihalardagi aʼzoligi va obunalari oʻchiriladi. Bu amalni ortga qaytarib boʻlmaydi.
+rmuser-yes = 🗑 Oʻchirish
+rmuser-done = 🗑 { $name } botdan oʻchirildi.
 
 groups-title = Guruhlar (bot xabarlarini yoqish/oʻchirish uchun bosing):
 groups-empty = Hali bogʻlangan guruhlar yoʻq. Guruhda /bind orqali bogʻlang.

@@ -53,5 +53,6 @@ def admin_menu(i18n) -> "InlineKeyboardMarkup":  # noqa: F821
     kb.button(text=i18n.get("admin-leads"), callback_data="adm:leads")
     kb.button(text=i18n.get("admin-roles"), callback_data="adm:roles")
     kb.button(text=i18n.get("admin-groups"), callback_data="adm:groups")
+    kb.button(text=i18n.get("admin-remove-user"), callback_data="adm:rmuser")
     kb.adjust(1)
     return kb.as_markup()

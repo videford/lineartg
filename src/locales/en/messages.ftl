@@ -217,6 +217,12 @@ admin-setlead = 👑 Assign lead
 admin-leads = 📜 Leads list
 admin-roles = 👑 Roles
 admin-groups = 🔔 Group announcements
+admin-remove-user = 🗑 Remove user
+
+rmuser-choose = Who to remove from the bot?
+rmuser-confirm = Remove { $name } from the bot? Their roles, project memberships and subscriptions will be deleted. This cannot be undone.
+rmuser-yes = 🗑 Remove
+rmuser-done = 🗑 { $name } has been removed from the bot.
 
 groups-title = Groups (tap to turn the bot's messages on/off):
 groups-empty = No bound groups yet. Bind one with /bind inside the group.

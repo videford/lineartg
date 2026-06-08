@@ -12,7 +12,7 @@ from aiogram.fsm.context import FSMContext
 from aiogram.types import CallbackQuery, Message
 from aiogram.utils.keyboard import InlineKeyboardBuilder
 from aiogram_i18n import I18nContext
-from sqlalchemy import select
+from sqlalchemy import delete, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from bot.db import Role, User
@@ -444,6 +444,80 @@ async def role_confirm_admin(
         await call.message.edit_text(
             i18n.get("roles-done", name=target.display_name, role="admin")
         )
+    await call.answer()
+
+
+# ── remove a user from the bot (left the company) ────────────
+
+
+@router.callback_query(F.data == "adm:rmuser")
+async def adm_rmuser(
+    call: CallbackQuery, user: User, session: AsyncSession, i18n: I18nContext
+) -> None:
+    if not can(user.role, Action.MANAGE_ROLES):
+        await call.answer(i18n.get("err-no-permission"), show_alert=True)
+        return
+    members = await list_members(session)
+    await call.message.edit_text(
+        i18n.get("rmuser-choose"),
+        reply_markup=members_keyboard(members, prefix="rmu", back="adm:back"),
+    )
+    await call.answer()
+
+
+@router.callback_query(F.data.startswith("rmu:"))
+async def rmuser_pick(
+    call: CallbackQuery, user: User, session: AsyncSession, i18n: I18nContext
+) -> None:
+    if not can(user.role, Action.MANAGE_ROLES):
+        await call.answer(i18n.get("err-no-permission"), show_alert=True)
+        return
+    tg_id = int(call.data.split(":", 1)[1])
+    if tg_id == user.telegram_id:
+        await call.answer(i18n.get("roles-no-self"), show_alert=True)
+        return
+    if tg_id in settings.admin_ids:
+        await call.answer(i18n.get("roles-bootstrap-locked"), show_alert=True)
+        return
+    target = await session.get(User, tg_id)
+    if target is None:
+        await call.answer(i18n.get("err-unknown-member"), show_alert=True)
+        return
+    kb = InlineKeyboardBuilder()
+    kb.button(text=i18n.get("rmuser-yes"), callback_data=f"rmyes:{tg_id}")
+    kb.button(text=i18n.get("roles-no"), callback_data="adm:rmuser")
+    kb.adjust(2)
+    await call.message.edit_text(
+        i18n.get("rmuser-confirm", name=target.display_name), reply_markup=kb.as_markup()
+    )
+    await call.answer()
+
+
+@router.callback_query(F.data.startswith("rmyes:"))
+async def rmuser_confirm(
+    call: CallbackQuery, user: User, session: AsyncSession, i18n: I18nContext
+) -> None:
+    if not can(user.role, Action.MANAGE_ROLES):
+        await call.answer(i18n.get("err-no-permission"), show_alert=True)
+        return
+    tg_id = int(call.data.split(":", 1)[1])
+    if tg_id == user.telegram_id or tg_id in settings.admin_ids:
+        await call.answer(i18n.get("err-no-permission"), show_alert=True)
+        return
+    target = await session.get(User, tg_id)
+    if target is None:
+        await call.answer(i18n.get("err-unknown-member"), show_alert=True)
+        return
+    name = target.display_name
+    # Remove dependent rows explicitly (in case a FK cascade is missing), then
+    # the user. Existing Linear issues keep the tg:<slug> label untouched.
+    from bot.db import ProjectLead, ProjectMember, Subscription
+
+    for model in (ProjectLead, ProjectMember, Subscription):
+        await session.execute(delete(model).where(model.telegram_id == tg_id))
+    await session.delete(target)
+    await session.commit()
+    await call.message.edit_text(i18n.get("rmuser-done", name=name))
     await call.answer()
 
 
