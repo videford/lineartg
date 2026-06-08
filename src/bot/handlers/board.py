@@ -59,8 +59,9 @@ def _section_rows(kb: InlineKeyboardBuilder, i18n: I18nContext) -> None:
 def _kb(i18n: I18nContext, open_count: int = 0, page: int = 0, total_pages: int = 1):
     kb = InlineKeyboardBuilder()
     row: list[InlineKeyboardButton] = []
+    start = page * PAGE  # so button labels match the continuous numbering in the text
     for n in range(open_count):
-        row.append(InlineKeyboardButton(text=str(n + 1), callback_data=f"li:open:{n}"))
+        row.append(InlineKeyboardButton(text=str(start + n + 1), callback_data=f"li:open:{n}"))
         if len(row) == 5:
             kb.row(*row)
             row = []
