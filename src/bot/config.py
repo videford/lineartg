@@ -29,6 +29,12 @@ class Settings(BaseSettings):
     database_url: str = "postgresql+asyncpg://lineartg:lineartg@localhost:5432/lineartg"
     redis_url: str = "redis://localhost:6379/0"
 
+    # AI assistant (optional). Empty ai_provider disables the assistant.
+    ai_provider: str = ""  # "anthropic" | "openai" | "" (off)
+    anthropic_api_key: str = ""
+    openai_api_key: str = ""
+    ai_model: str = ""  # optional override; sensible default per provider
+
     # App
     bootstrap_admin_ids: str = ""
     default_lang: str = "ru"
@@ -76,6 +82,20 @@ class Settings(BaseSettings):
         return {
             int(x) for x in self.bootstrap_admin_ids.replace(" ", "").split(",") if x
         }
+
+    @property
+    def ai_enabled(self) -> bool:
+        if self.ai_provider == "anthropic":
+            return bool(self.anthropic_api_key)
+        if self.ai_provider == "openai":
+            return bool(self.openai_api_key)
+        return False
+
+    @property
+    def ai_model_name(self) -> str:
+        if self.ai_model:
+            return self.ai_model
+        return "claude-sonnet-4-20250514" if self.ai_provider == "anthropic" else "gpt-4o-mini"
 
     @property
     def telegram_webhook_path(self) -> str:

@@ -536,6 +536,11 @@ async def fallback_message(
     log.info("fallback: unhandled message from %s: %r", user.telegram_id, message.text)
     if message.chat.type != "private":
         return  # stay quiet in groups to avoid noise
+    # If the AI assistant is enabled, let it try to answer free-text first.
+    from bot.handlers import assistant as assistant_h
+
+    if await assistant_h.handle(message, user, session, state, i18n):
+        return
     await state.clear()
     await show_menu(message, user, session, i18n)
 
