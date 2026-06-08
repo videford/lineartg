@@ -26,7 +26,7 @@ from bot.services.users import OWNER_PREFIX, list_members
 router = Router(name="board")
 
 CLOSED = {"completed", "canceled"}
-MAX_OPEN = 10  # how many tasks get a numbered open-button
+PAGE = 10  # tasks per page (each gets a numbered open-button)
 
 
 def _owner_labels(issue: dict) -> list[str]:
@@ -56,7 +56,7 @@ def _section_rows(kb: InlineKeyboardBuilder, i18n: I18nContext) -> None:
     )
 
 
-def _kb(i18n: I18nContext, open_count: int = 0):
+def _kb(i18n: I18nContext, open_count: int = 0, page: int = 0, total_pages: int = 1):
     kb = InlineKeyboardBuilder()
     row: list[InlineKeyboardButton] = []
     for n in range(open_count):
@@ -66,6 +66,17 @@ def _kb(i18n: I18nContext, open_count: int = 0):
             row = []
     if row:
         kb.row(*row)
+    # Pagination row (only when there's more than one page).
+    if total_pages > 1:
+        nav: list[InlineKeyboardButton] = []
+        if page > 0:
+            nav.append(InlineKeyboardButton(text=i18n.get("list-prev"), callback_data=f"board:pg:{page-1}"))
+        nav.append(InlineKeyboardButton(
+            text=i18n.get("list-page", page=page + 1, total=total_pages), callback_data="li:noop"
+        ))
+        if page < total_pages - 1:
+            nav.append(InlineKeyboardButton(text=i18n.get("list-next"), callback_data=f"board:pg:{page+1}"))
+        kb.row(*nav)
     _section_rows(kb, i18n)
     return kb.as_markup()
 
@@ -107,20 +118,52 @@ def _assignee_names(issue: dict, names: dict[str, str]) -> str:
     return ", ".join(names.get(lb, lb[len(OWNER_PREFIX):]) for lb in labels)
 
 
-async def _show_tasks(call, state, i18n, title: str, issues: list[dict], names: dict[str, str]):
-    """Render a task list with numbered open-buttons + the section menu."""
-    shown = issues[:MAX_OPEN]
-    await state.update_data(list_view_ids=[i["id"] for i in shown])
-    lines = [f"<b>{title}</b>"]
+def _section_title(i18n: I18nContext, section: str) -> str:
+    return {
+        "due": i18n.get("board-due"),
+        "free": i18n.get("board-free"),
+        "open": i18n.get("board-open"),
+    }.get(section, i18n.get("board-open"))
+
+
+async def _section_issues(session: AsyncSession, section: str):
+    """Return (issues, label→name map) for a board section, filtered/sorted."""
+    issues = await _issues(session)
+    names = await _label_map(session)
+    if section == "due":
+        data = sorted(
+            (i for i in issues if _is_open(i) and i.get("dueDate")),
+            key=lambda i: i["dueDate"],
+        )
+    elif section == "free":
+        data = [i for i in issues if _is_open(i) and not _owner_labels(i)]
+    else:  # "open"
+        data = [i for i in issues if _is_open(i)]
+    return data, names
+
+
+async def _show_tasks(call, state, i18n, section: str, issues: list[dict], names, page: int = 0):
+    """Render one page of a task list with numbered open-buttons + nav + menu."""
+    total_pages = max(1, (len(issues) + PAGE - 1) // PAGE)
+    page = max(0, min(page, total_pages - 1))
+    start = page * PAGE
+    shown = issues[start : start + PAGE]
+    # Number buttons index into this page's slice, so store exactly the slice.
+    await state.update_data(
+        list_view_ids=[i["id"] for i in shown], board_section=section, board_page=page
+    )
+    lines = [f"<b>{_section_title(i18n, section)}</b> — {i18n.get('list-count', n=len(issues))}"]
     if not shown:
         lines.append(i18n.get("board-empty"))
-    for n, i in enumerate(shown, start=1):
+    for n, i in enumerate(shown, start=start + 1):  # continuous numbering across pages
         state_name = (i.get("state") or {}).get("name", "")
         due = f" · ⏰{fmt_date(i['dueDate'])}" if i.get("dueDate") else ""
-        lines.append(f"{n}. {_short(i)} — {html.escape(state_name)}{due} · {html.escape(_assignee_names(i, names))}")
-    if len(issues) > MAX_OPEN:
-        lines.append(i18n.get("board-more", n=len(issues) - MAX_OPEN))
-    await call.message.edit_text("\n".join(lines), reply_markup=_kb(i18n, len(shown)))
+        lines.append(
+            f"{n}. {_short(i)} — {html.escape(state_name)}{due} · {html.escape(_assignee_names(i, names))}"
+        )
+    await call.message.edit_text(
+        "\n".join(lines), reply_markup=_kb(i18n, len(shown), page, total_pages)
+    )
     await call.answer()
 
 
@@ -149,30 +192,31 @@ async def board_who(call: CallbackQuery, session: AsyncSession, i18n: I18nContex
 async def board_due(
     call: CallbackQuery, session: AsyncSession, state: FSMContext, i18n: I18nContext
 ) -> None:
-    issues = await _issues(session)
-    names = await _label_map(session)
-    dated = sorted(
-        (i for i in issues if _is_open(i) and i.get("dueDate")),
-        key=lambda i: i["dueDate"],
-    )
-    await _show_tasks(call, state, i18n, i18n.get("board-due"), dated, names)
+    issues, names = await _section_issues(session, "due")
+    await _show_tasks(call, state, i18n, "due", issues, names, page=0)
 
 
 @router.callback_query(F.data == "board:free")
 async def board_free(
     call: CallbackQuery, session: AsyncSession, state: FSMContext, i18n: I18nContext
 ) -> None:
-    issues = await _issues(session)
-    names = await _label_map(session)
-    free = [i for i in issues if _is_open(i) and not _owner_labels(i)]
-    await _show_tasks(call, state, i18n, i18n.get("board-free"), free, names)
+    issues, names = await _section_issues(session, "free")
+    await _show_tasks(call, state, i18n, "free", issues, names, page=0)
 
 
 @router.callback_query(F.data == "board:open")
 async def board_open(
     call: CallbackQuery, session: AsyncSession, state: FSMContext, i18n: I18nContext
 ) -> None:
-    issues = await _issues(session)
-    names = await _label_map(session)
-    open_issues = [i for i in issues if _is_open(i)]
-    await _show_tasks(call, state, i18n, i18n.get("board-open"), open_issues, names)
+    issues, names = await _section_issues(session, "open")
+    await _show_tasks(call, state, i18n, "open", issues, names, page=0)
+
+
+@router.callback_query(F.data.startswith("board:pg:"))
+async def board_page(
+    call: CallbackQuery, session: AsyncSession, state: FSMContext, i18n: I18nContext
+) -> None:
+    page = int(call.data.split(":", 2)[2])
+    section = (await state.get_data()).get("board_section", "open")
+    issues, names = await _section_issues(session, section)
+    await _show_tasks(call, state, i18n, section, issues, names, page=page)
