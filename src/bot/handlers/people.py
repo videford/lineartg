@@ -79,7 +79,12 @@ async def people_profile(
     try:
         client = await workspace.get_client(session)
         own = await client.issues_by_label(target.linear_label) if target.linear_label else []
-        current = [i for i in own if (i.get("state") or {}).get("type") == "started"]
+        # All open tasks the user is assigned to (not just in-progress); hide
+        # finished ones so the list stays a workload view.
+        current = [
+            i for i in own
+            if (i.get("state") or {}).get("type") not in ("completed", "canceled")
+        ]
 
         # Followed-but-not-owner: subscriptions where target isn't the assignee.
         followed: list[dict] = []

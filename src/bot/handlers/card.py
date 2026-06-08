@@ -72,6 +72,17 @@ async def _resolve_owner_names(session: AsyncSession, issue: dict) -> list[str]:
     return [rows.get(lb, lb[len(OWNER_PREFIX):].replace("-", " ").title()) for lb in labels]
 
 
+async def _owner_ids(session: AsyncSession, issue: dict) -> set[int]:
+    """Telegram ids of the issue's assignees (users whose owner label is set)."""
+    labels = _owner_labels(issue)
+    if not labels:
+        return set()
+    return {
+        u.telegram_id
+        for u in await session.scalars(select(User).where(User.linear_label.in_(labels)))
+    }
+
+
 async def _names_for_ids(session: AsyncSession, ids: list[int]) -> list[str]:
     if not ids:
         return []
@@ -180,7 +191,10 @@ async def _render(
 
     subscribed = await is_subscribed(session, user.telegram_id, issue_id)
     owner_names = await _resolve_owner_names(session, issue)
-    subscriber_names = await _names_for_ids(session, await subscriber_ids(session, issue_id))
+    # The assignee is auto-subscribed; don't also list them under Subscribers.
+    owner_ids = await _owner_ids(session, issue)
+    sub_ids = [i for i in await subscriber_ids(session, issue_id) if i not in owner_ids]
+    subscriber_names = await _names_for_ids(session, sub_ids)
     text = _format_card(issue, owner_names, subscriber_names, i18n)
     is_guest = user.role == Role.guest
     kb = card_keyboard(

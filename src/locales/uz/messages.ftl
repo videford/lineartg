@@ -181,7 +181,7 @@ board-bind-first = Bu guruh bogʻlanmagan. Admin kerakli mavzuda /bind bajarishi
 
 # people directory
 people-title = Kompaniya aʼzolari ({ $n }):
-people-current = Hozir jarayonda:
+people-current = Biriktirilgan vazifalar:
 people-recent = Yaqinda yakunlangan:
 people-following = Obuna:
 people-linear-unavailable = ⚠️ Linear ma'lumotlari mavjud emas (/connect orqali qayta ulang).

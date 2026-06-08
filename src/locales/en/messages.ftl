@@ -181,7 +181,7 @@ board-bind-first = This group isn't bound. An admin must run /bind in the desire
 
 # people directory
 people-title = Company members ({ $n }):
-people-current = Currently in progress:
+people-current = Assigned tasks:
 people-recent = Recently completed:
 people-following = Following:
 people-linear-unavailable = ⚠️ Linear data unavailable (reconnect via /connect).
