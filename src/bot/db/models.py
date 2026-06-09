@@ -71,6 +71,12 @@ class OAuthToken(Base, TimestampMixin):
     access_token: Mapped[str] = mapped_column(Text)
     scope: Mapped[str | None] = mapped_column(String(256), nullable=True)
     app_user_id: Mapped[str | None] = mapped_column(String(64), nullable=True)
+    # OAuth refresh: if Linear issues an expiring token, we store the refresh
+    # token + expiry and renew automatically before it lapses.
+    refresh_token: Mapped[str | None] = mapped_column(Text, nullable=True)
+    expires_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )
 
 
 class Project(Base, TimestampMixin):

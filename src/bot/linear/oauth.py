@@ -45,3 +45,22 @@ async def exchange_code(code: str) -> dict:
         )
         resp.raise_for_status()
         return resp.json()
+
+
+async def refresh_access_token(refresh_token: str) -> dict:
+    """Exchange a refresh token for a fresh access token (when Linear issues
+    expiring tokens). Returns the token payload (access_token, maybe a new
+    refresh_token and expires_in)."""
+    async with httpx.AsyncClient(timeout=20) as client:
+        resp = await client.post(
+            TOKEN_URL,
+            data={
+                "client_id": settings.linear_client_id,
+                "client_secret": settings.linear_client_secret,
+                "grant_type": "refresh_token",
+                "refresh_token": refresh_token,
+            },
+            headers={"Content-Type": "application/x-www-form-urlencoded"},
+        )
+        resp.raise_for_status()
+        return resp.json()

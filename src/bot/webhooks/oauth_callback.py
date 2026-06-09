@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import logging
+from datetime import datetime, timedelta, timezone
 
 from aiohttp import web
 
@@ -25,6 +26,20 @@ async def oauth_callback(request: web.Request) -> web.Response:
 
     token_data = await exchange_code(code)
     access_token = token_data["access_token"]
+    refresh = token_data.get("refresh_token")
+    expires_in = token_data.get("expires_in")
+    expires_at = (
+        datetime.now(timezone.utc) + timedelta(seconds=int(expires_in))
+        if expires_in
+        else None
+    )
+    # Diagnostics: how long does Linear say this token lasts, and did it give us a
+    # refresh token? This tells us whether 401s are expiry (fixable by refresh) or
+    # revocation (needs reconnect).
+    log.info(
+        "Linear token issued: expires_in=%s refresh_token=%s",
+        expires_in, bool(refresh),
+    )
 
     # Identify the workspace this token belongs to.
     client = LinearClient(access_token)
@@ -37,6 +52,8 @@ async def oauth_callback(request: web.Request) -> web.Response:
             existing.access_token = access_token
             existing.scope = token_data.get("scope")
             existing.app_user_id = viewer["viewer"]["id"]
+            existing.refresh_token = refresh
+            existing.expires_at = expires_at
         else:
             session.add(
                 OAuthToken(
@@ -45,6 +62,8 @@ async def oauth_callback(request: web.Request) -> web.Response:
                     access_token=access_token,
                     scope=token_data.get("scope"),
                     app_user_id=viewer["viewer"]["id"],
+                    refresh_token=refresh,
+                    expires_at=expires_at,
                 )
             )
         await session.commit()
