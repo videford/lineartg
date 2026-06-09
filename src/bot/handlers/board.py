@@ -168,8 +168,9 @@ async def _show_tasks(call, state, i18n, section: str, issues: list[dict], names
     await call.answer()
 
 
-@router.callback_query(F.data == "board:who")
-async def board_who(call: CallbackQuery, session: AsyncSession, i18n: I18nContext) -> None:
+async def _who_pairs(session: AsyncSession) -> list[tuple[str, dict]]:
+    """Started tasks grouped by assignee, flattened to ordered (name, issue) pairs
+    so they can be numbered and paginated like the other sections."""
     issues = await _issues(session)
     names = await _label_map(session)
     started = [i for i in issues if (i.get("state") or {}).get("type") == "started"]
@@ -178,15 +179,46 @@ async def board_who(call: CallbackQuery, session: AsyncSession, i18n: I18nContex
         # Only assigned tasks here — unassigned ones live in "Без исполнителя".
         for lb in _owner_labels(i):
             by_owner.setdefault(names.get(lb, lb), []).append(i)
+    pairs: list[tuple[str, dict]] = []
+    for who in sorted(by_owner):
+        for issue in by_owner[who]:
+            pairs.append((who, issue))
+    return pairs
 
-    lines = [f"<b>{i18n.get('board-who')}</b>"]
-    if not by_owner:
+
+async def _render_who(call, state, i18n, pairs: list[tuple[str, dict]], page: int = 0):
+    """Render one page of the who's-busy view with per-person headers and
+    numbered open-buttons (the number matches the open-button label)."""
+    total_pages = max(1, (len(pairs) + PAGE - 1) // PAGE)
+    page = max(0, min(page, total_pages - 1))
+    start = page * PAGE
+    shown = pairs[start : start + PAGE]
+    await state.update_data(
+        list_view_ids=[issue["id"] for _, issue in shown],
+        board_section="who",
+        board_page=page,
+    )
+    lines = [f"<b>{i18n.get('board-who')}</b> — {i18n.get('list-count', n=len(pairs))}"]
+    if not shown:
         lines.append(i18n.get("board-empty"))
-    for who, tasks in sorted(by_owner.items()):
-        lines.append(f"• <b>{html.escape(who)}</b>:")
-        lines += [f"   {_short(t)}" for t in tasks]
-    await call.message.edit_text("\n".join(lines), reply_markup=_kb(i18n))
+    last_who = None
+    for offset, (who, issue) in enumerate(shown):
+        if who != last_who:
+            lines.append(f"• <b>{html.escape(who)}</b>:")
+            last_who = who
+        lines.append(f"   {start + offset + 1}. {_short(issue)}")
+    await call.message.edit_text(
+        "\n".join(lines), reply_markup=_kb(i18n, len(shown), page, total_pages)
+    )
     await call.answer()
+
+
+@router.callback_query(F.data == "board:who")
+async def board_who(
+    call: CallbackQuery, session: AsyncSession, state: FSMContext, i18n: I18nContext
+) -> None:
+    pairs = await _who_pairs(session)
+    await _render_who(call, state, i18n, pairs, page=0)
 
 
 @router.callback_query(F.data == "board:due")
@@ -219,5 +251,9 @@ async def board_page(
 ) -> None:
     page = int(call.data.split(":", 2)[2])
     section = (await state.get_data()).get("board_section", "open")
+    if section == "who":
+        pairs = await _who_pairs(session)
+        await _render_who(call, state, i18n, pairs, page=page)
+        return
     issues, names = await _section_issues(session, section)
     await _show_tasks(call, state, i18n, section, issues, names, page=page)
