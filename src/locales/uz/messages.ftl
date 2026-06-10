@@ -185,6 +185,7 @@ people-current = Biriktirilgan vazifalar:
 people-recent = Yaqinda yakunlangan:
 people-following = Obuna:
 people-linear-unavailable = ⚠️ Linear ma'lumotlari mavjud emas (/connect orqali qayta ulang).
+ai-unavailable = ⚠️ Yordamchi hozir mavjud emas (soʻrovlar limiti yoki AI xatosi). Keyinroq urinib koʻring yoki menyudan foydalaning.
 
 # browse all tasks
 browse-no-projects = Loyihalar hali yuklanmagan. Administratorga murojaat qiling.
