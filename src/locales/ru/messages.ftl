@@ -185,7 +185,6 @@ people-current = Назначенные задачи:
 people-recent = Недавно завершено:
 people-following = Подписан:
 people-linear-unavailable = ⚠️ Данные Linear недоступны (нужно переподключить через /connect).
-ai-unavailable = ⚠️ Ассистент сейчас недоступен (превышен лимит запросов или ошибка ИИ). Попробуйте позже или воспользуйтесь меню.
 
 # browse all tasks
 browse-no-projects = Проекты ещё не загружены. Обратитесь к администратору.

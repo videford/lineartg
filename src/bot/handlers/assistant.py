@@ -180,11 +180,9 @@ async def handle(
     if answer:
         await message.answer(answer, disable_web_page_preview=True)
         return True
-    # The assistant was enabled and attempted, but errored or produced nothing
-    # (e.g. a 429/quota from the provider). Tell the user instead of silently
-    # showing the menu, so the failure is visible.
-    await message.answer(i18n.get("ai-unavailable"))
-    return True
+    # Errored or produced nothing (e.g. a 429/quota) — fall back to the menu
+    # (caller shows it) just like before the assistant existed.
+    return False
 
 
 async def _list_tasks(client, session, user, members, label_to_name, args) -> str:

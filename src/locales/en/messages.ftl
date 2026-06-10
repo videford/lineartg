@@ -185,7 +185,6 @@ people-current = Assigned tasks:
 people-recent = Recently completed:
 people-following = Following:
 people-linear-unavailable = ⚠️ Linear data unavailable (reconnect via /connect).
-ai-unavailable = ⚠️ The assistant is unavailable right now (rate limit or AI error). Try again later or use the menu.
 
 # browse all tasks
 browse-no-projects = Projects aren't loaded yet. Contact an admin.
