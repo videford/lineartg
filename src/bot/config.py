@@ -101,7 +101,7 @@ class Settings(BaseSettings):
         return {
             "anthropic": "claude-sonnet-4-20250514",
             "openai": "gpt-4o-mini",
-            "gemini": "gemini-2.0-flash-lite",
+            "gemini": "gemini-flash-lite-latest",  # tracks newest Flash-Lite
         }.get(self.ai_provider, "gpt-4o-mini")
 
     @property
