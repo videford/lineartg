@@ -61,13 +61,15 @@ Linear → Settings → API → **Webhooks → New webhook**:
 Без этих переменных ассистент выключен, бот работает как обычно. Чтобы включить —
 добавь в Variables один провайдер и ключ:
 ```
-AI_PROVIDER       = anthropic          # или openai
+AI_PROVIDER       = anthropic          # anthropic | openai | gemini
 ANTHROPIC_API_KEY = <ключ Anthropic>   # если anthropic
 OPENAI_API_KEY    = <ключ OpenAI>      # если openai
-# AI_MODEL        = <необязательно; по умолчанию claude-sonnet-4 / gpt-4o-mini>
+GEMINI_API_KEY    = <ключ Google>      # если gemini
+# AI_MODEL        = <необязательно; напр. gemini-2.0-flash-lite>
 ```
 - Ключ Anthropic: https://console.anthropic.com → **API Keys**.
 - Ключ OpenAI: https://platform.openai.com/api-keys (нужен баланс/биллинг).
+- Ключ Gemini: https://aistudio.google.com/apikey (есть бесплатный тариф).
 После сохранения — **Redeploy**. В личке с ботом любое свободное сообщение (не команда
 и не кнопка) обрабатывает ассистент: отвечает по задачам и готовит черновики
 (создание всегда через подтверждение в карточке-предпросмотре).

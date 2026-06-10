@@ -30,9 +30,10 @@ class Settings(BaseSettings):
     redis_url: str = "redis://localhost:6379/0"
 
     # AI assistant (optional). Empty ai_provider disables the assistant.
-    ai_provider: str = ""  # "anthropic" | "openai" | "" (off)
+    ai_provider: str = ""  # "anthropic" | "openai" | "gemini" | "" (off)
     anthropic_api_key: str = ""
     openai_api_key: str = ""
+    gemini_api_key: str = ""
     ai_model: str = ""  # optional override; sensible default per provider
 
     # App
@@ -89,13 +90,19 @@ class Settings(BaseSettings):
             return bool(self.anthropic_api_key)
         if self.ai_provider == "openai":
             return bool(self.openai_api_key)
+        if self.ai_provider == "gemini":
+            return bool(self.gemini_api_key)
         return False
 
     @property
     def ai_model_name(self) -> str:
         if self.ai_model:
             return self.ai_model
-        return "claude-sonnet-4-20250514" if self.ai_provider == "anthropic" else "gpt-4o-mini"
+        return {
+            "anthropic": "claude-sonnet-4-20250514",
+            "openai": "gpt-4o-mini",
+            "gemini": "gemini-2.0-flash-lite",
+        }.get(self.ai_provider, "gpt-4o-mini")
 
     @property
     def telegram_webhook_path(self) -> str:

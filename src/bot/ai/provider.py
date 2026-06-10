@@ -21,6 +21,7 @@ log = logging.getLogger(__name__)
 
 ANTHROPIC_URL = "https://api.anthropic.com/v1/messages"
 OPENAI_URL = "https://api.openai.com/v1/chat/completions"
+GEMINI_URL = "https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent"
 MAX_STEPS = 5  # tool round-trips before we give up
 MAX_TOKENS = 1024
 
@@ -38,6 +39,8 @@ async def run_agent(
             return await _run_anthropic(system, user_text, tools, execute)
         if settings.ai_provider == "openai":
             return await _run_openai(system, user_text, tools, execute)
+        if settings.ai_provider == "gemini":
+            return await _run_gemini(system, user_text, tools, execute)
     except Exception:  # noqa: BLE001 — never crash the bot on an AI failure
         log.exception("AI agent failed")
         return None
@@ -122,4 +125,56 @@ async def _run_openai(system, user_text, tools, execute) -> str | None:
                 messages.append(
                     {"role": "tool", "tool_call_id": tc["id"], "content": out}
                 )
+    return None
+
+
+async def _run_gemini(system, user_text, tools, execute) -> str | None:
+    headers = {
+        "x-goog-api-key": settings.gemini_api_key,
+        "content-type": "application/json",
+    }
+    url = GEMINI_URL.format(model=settings.ai_model_name)
+    gtools = [
+        {
+            "function_declarations": [
+                {
+                    "name": t["name"],
+                    "description": t["description"],
+                    "parameters": t["parameters"],
+                }
+                for t in tools
+            ]
+        }
+    ]
+    contents: list[dict] = [{"role": "user", "parts": [{"text": user_text}]}]
+    async with httpx.AsyncClient(timeout=60) as http:
+        for _ in range(MAX_STEPS):
+            body = {
+                "system_instruction": {"parts": [{"text": system}]},
+                "contents": contents,
+                "tools": gtools,
+            }
+            resp = await http.post(url, headers=headers, json=body)
+            resp.raise_for_status()
+            candidates = resp.json().get("candidates", [])
+            if not candidates:
+                return None
+            content = candidates[0].get("content", {}) or {}
+            parts = content.get("parts", []) or []
+            calls = [p["functionCall"] for p in parts if "functionCall" in p]
+            if not calls:
+                return "".join(p.get("text", "") for p in parts if "text" in p).strip()
+            contents.append(content)  # echo the model turn back
+            fr_parts = []
+            for call in calls:
+                out = await execute(call.get("name", ""), call.get("args") or {})
+                fr_parts.append(
+                    {
+                        "functionResponse": {
+                            "name": call.get("name", ""),
+                            "response": {"result": out},
+                        }
+                    }
+                )
+            contents.append({"role": "user", "parts": fr_parts})
     return None
