@@ -54,6 +54,9 @@ draft-hint = Maydonlarni tekshiring va «Eʼlon qilish» tugmasini bosing.
 draft-canceled = Vazifa yaratish bekor qilindi.
 draft-no-projects = Siz hali vazifa yarata olmaysiz. Administratordan sizni loyihaga qoʻshishini soʻrang.
 draft-assign-self = 👤 Oʻzimga biriktirish
+draft-no-project-btn = ➖ Loyihasiz
+draft-no-project = (loyihasiz)
+draft-choose-team = Jamoani tanlang:
 admin-new-user = 🆕 Yangi foydalanuvchi { $name } tasdiqlashni kutmoqda. Ruxsat berish uchun «Boshqaruv» → «Rollar»ni oching.
 
 assign-choose-member = Kimga biriktirilsin?

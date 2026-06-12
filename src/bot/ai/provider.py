@@ -30,24 +30,32 @@ ExecuteFn = Callable[[str, dict], Awaitable[str]]
 
 
 async def run_agent(
-    system: str, user_text: str, tools: list[Tool], execute: ExecuteFn
+    system: str,
+    user_text: str,
+    tools: list[Tool],
+    execute: ExecuteFn,
+    history: list[dict] | None = None,
 ) -> str | None:
     """Run the configured provider's agent loop. Returns the final text, or None
-    if the assistant is disabled / errored / produced no answer."""
+    if the assistant is disabled / errored / produced no answer.
+
+    `history` is prior conversation as [{role: 'user'|'assistant', content: str}],
+    prepended so the model can answer in context."""
+    history = history or []
     try:
         if settings.ai_provider == "anthropic":
-            return await _run_anthropic(system, user_text, tools, execute)
+            return await _run_anthropic(system, user_text, tools, execute, history)
         if settings.ai_provider == "openai":
-            return await _run_openai(system, user_text, tools, execute)
+            return await _run_openai(system, user_text, tools, execute, history)
         if settings.ai_provider == "gemini":
-            return await _run_gemini(system, user_text, tools, execute)
+            return await _run_gemini(system, user_text, tools, execute, history)
     except Exception:  # noqa: BLE001 — never crash the bot on an AI failure
         log.exception("AI agent failed")
         return None
     return None
 
 
-async def _run_anthropic(system, user_text, tools, execute) -> str | None:
+async def _run_anthropic(system, user_text, tools, execute, history) -> str | None:
     headers = {
         "x-api-key": settings.anthropic_api_key,
         "anthropic-version": "2023-06-01",
@@ -57,7 +65,10 @@ async def _run_anthropic(system, user_text, tools, execute) -> str | None:
         {"name": t["name"], "description": t["description"], "input_schema": t["parameters"]}
         for t in tools
     ]
-    messages: list[dict] = [{"role": "user", "content": user_text}]
+    messages: list[dict] = [
+        {"role": h["role"], "content": h["content"]} for h in history
+    ]
+    messages.append({"role": "user", "content": user_text})
     async with httpx.AsyncClient(timeout=60) as http:
         for _ in range(MAX_STEPS):
             body = {
@@ -86,7 +97,7 @@ async def _run_anthropic(system, user_text, tools, execute) -> str | None:
     return None
 
 
-async def _run_openai(system, user_text, tools, execute) -> str | None:
+async def _run_openai(system, user_text, tools, execute, history) -> str | None:
     headers = {
         "Authorization": f"Bearer {settings.openai_api_key}",
         "content-type": "application/json",
@@ -102,10 +113,9 @@ async def _run_openai(system, user_text, tools, execute) -> str | None:
         }
         for t in tools
     ]
-    messages: list[dict] = [
-        {"role": "system", "content": system},
-        {"role": "user", "content": user_text},
-    ]
+    messages: list[dict] = [{"role": "system", "content": system}]
+    messages += [{"role": h["role"], "content": h["content"]} for h in history]
+    messages.append({"role": "user", "content": user_text})
     async with httpx.AsyncClient(timeout=60) as http:
         for _ in range(MAX_STEPS):
             body = {"model": settings.ai_model_name, "messages": messages, "tools": otools}
@@ -128,7 +138,7 @@ async def _run_openai(system, user_text, tools, execute) -> str | None:
     return None
 
 
-async def _run_gemini(system, user_text, tools, execute) -> str | None:
+async def _run_gemini(system, user_text, tools, execute, history) -> str | None:
     headers = {
         "x-goog-api-key": settings.gemini_api_key,
         "content-type": "application/json",
@@ -146,7 +156,11 @@ async def _run_gemini(system, user_text, tools, execute) -> str | None:
             ]
         }
     ]
-    contents: list[dict] = [{"role": "user", "parts": [{"text": user_text}]}]
+    contents: list[dict] = [
+        {"role": "model" if h["role"] == "assistant" else "user", "parts": [{"text": h["content"]}]}
+        for h in history
+    ]
+    contents.append({"role": "user", "parts": [{"text": user_text}]})
     async with httpx.AsyncClient(timeout=60) as http:
         for _ in range(MAX_STEPS):
             body = {

@@ -15,6 +15,7 @@ from datetime import date
 
 from aiogram.fsm.context import FSMContext
 from aiogram.types import Message
+from aiogram.utils.keyboard import InlineKeyboardBuilder
 from aiogram_i18n import I18nContext
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -30,6 +31,8 @@ from bot.services.users import OWNER_PREFIX, list_members
 
 log = logging.getLogger(__name__)
 
+MAX_HISTORY = 8  # remembered messages (≈4 exchanges) for conversation context
+MAX_BUTTONS = 12  # open-buttons attached under a task-listing answer
 CLOSED = {"completed", "canceled"}
 _PRIORITY_WORDS = {
     "urgent": 1, "срочно": 1, "срочный": 1, "shoshilinch": 1,
@@ -145,16 +148,29 @@ async def handle(
     label_to_name = {m.linear_label: m.display_name for m in members if m.linear_label}
     projects = await creatable_projects(session, user)
 
-    ctx: dict = {"draft": None}
+    ctx: dict = {"draft": None, "shown": [], "shown_ids": set()}
+
+    def _record(issues: list[dict]) -> None:
+        for i in issues:
+            iid = i.get("id")
+            if iid and iid not in ctx["shown_ids"]:
+                ctx["shown_ids"].add(iid)
+                ctx["shown"].append((iid, i.get("identifier") or "?"))
 
     async def execute(name: str, args: dict) -> str:
         try:
             if name == "search_tasks":
-                issues = await client.search_issues(args.get("query", ""))
-                return json.dumps([_brief(i, label_to_name) for i in issues[:20]], ensure_ascii=False)
+                issues = (await client.search_issues(args.get("query", "")))[:20]
+                _record(issues)
+                return json.dumps([_brief(i, label_to_name) for i in issues], ensure_ascii=False)
 
             if name == "list_tasks":
-                return await _list_tasks(client, session, user, members, label_to_name, args)
+                issues = await _list_tasks_issues(client, user, members, args)
+                if issues is None:
+                    return json.dumps({"error": f"no person matching '{args.get('assignee')}'"})
+                issues = issues[:30]
+                _record(issues)
+                return json.dumps([_brief(i, label_to_name) for i in issues], ensure_ascii=False)
 
             if name == "create_task":
                 return await _prepare_draft(session, user, projects, ctx, args)
@@ -169,23 +185,45 @@ async def handle(
     except Exception:  # noqa: BLE001
         pass
 
-    answer = await run_agent(system, text, TOOLS, execute)
+    history = (await state.get_data()).get("ai_history") or []
+    answer = await run_agent(system, text, TOOLS, execute, history=history)
 
     # A task was proposed → open the existing draft preview for confirmation.
     if ctx["draft"]:
+        await _remember(state, history, text, "(подготовил черновик задачи)")
         await state.update_data(**ctx["draft"])
         await draft_h._open_preview_new(message, session, state, i18n)
         return True
 
     if answer:
-        await message.answer(answer, disable_web_page_preview=True)
+        # Open-buttons for the tasks surfaced by the tools (numbered text + jump).
+        kb = None
+        if ctx["shown"]:
+            builder = InlineKeyboardBuilder()
+            for iid, ident in ctx["shown"][:MAX_BUTTONS]:
+                builder.button(text=ident, callback_data=f"ocard:{iid}")
+            builder.adjust(3)
+            kb = builder.as_markup()
+        await _remember(state, history, text, answer)
+        # parse_mode=None: the model replies in plain text, so Markdown like **x**
+        # isn't rendered literally by the HTML default parser.
+        await message.answer(answer, reply_markup=kb, parse_mode=None, disable_web_page_preview=True)
         return True
     # Errored or produced nothing (e.g. a 429/quota) — fall back to the menu
     # (caller shows it) just like before the assistant existed.
     return False
 
 
-async def _list_tasks(client, session, user, members, label_to_name, args) -> str:
+async def _remember(state: FSMContext, history: list[dict], user_text: str, reply: str) -> None:
+    new_history = (
+        history + [{"role": "user", "content": user_text}, {"role": "assistant", "content": reply}]
+    )[-MAX_HISTORY:]
+    await state.update_data(ai_history=new_history)
+
+
+async def _list_tasks_issues(client, user, members, args) -> list[dict] | None:
+    """Return matching issues (status-filtered), or None if a named person had no
+    match. Serialization happens in the caller so it can also record ids."""
     assignee = (args.get("assignee") or "any").strip()
     status = (args.get("status") or "open").strip()
     low = assignee.lower()
@@ -201,13 +239,10 @@ async def _list_tasks(client, session, user, members, label_to_name, args) -> st
             (m for m in members if m.linear_label and low in m.display_name.lower()), None
         )
         if match is None:
-            return json.dumps({"error": f"no person matching '{assignee}'"})
+            return None
         issues = await client.issues_by_label(match.linear_label)
 
-    issues = [i for i in issues if _keep_status(i, status)]
-    return json.dumps(
-        [_brief(i, label_to_name) for i in issues[:30]], ensure_ascii=False
-    )
+    return [i for i in issues if _keep_status(i, status)]
 
 
 async def _prepare_draft(session, user, projects, ctx, args) -> str:
@@ -284,11 +319,18 @@ def _system_prompt(user: User, projects, members) -> str:
         f"Team members: {people}.\n\n"
         "Capabilities:\n"
         "- Answer questions about tasks using search_tasks / list_tasks. Only state facts "
-        "returned by the tools; never invent task identifiers, names or numbers. Include the "
-        "task identifier (e.g. FLO-12) when listing tasks.\n"
+        "returned by the tools; never invent task identifiers, names or numbers.\n"
         "- When the user wants to add/create a task, call create_task. It opens a preview the "
         "user must confirm — do NOT claim the task is created. After calling it, reply briefly "
         "that you've prepared a draft for review.\n"
         "If a request is ambiguous (e.g. which project), ask a short clarifying question instead "
-        "of guessing."
+        "of guessing.\n\n"
+        "Formatting (IMPORTANT):\n"
+        "- Reply in PLAIN TEXT only. Do NOT use Markdown or HTML — no **, *, #, _, backticks "
+        "or <tags> (they are shown literally to the user).\n"
+        "- When listing tasks, make a NUMBERED list, one task per line, like:\n"
+        "  1. FLO-36 — парсинг данных — Рафаэль Шагиев · In Progress\n"
+        "  2. FLO-40 — deploying the site — Otabek · In Progress\n"
+        "  The bot automatically adds tap-to-open buttons under your message, so the user can "
+        "open each task by its number — keep the order of your list matching the tasks you listed."
     )

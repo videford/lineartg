@@ -30,13 +30,18 @@ from bot.keyboards.inline import (
     draft_due_keyboard,
     draft_preview_keyboard,
     draft_priority_keyboard,
-    projects_keyboard,
 )
 from bot.middlewares.i18n import SUPPORTED_LOCALES
 from bot.services import workspace
-from bot.services.permissions import can_create_in, can_manage_task
+from bot.services.permissions import (
+    can_create_in,
+    can_manage_task,
+    is_admin,
+    is_any_lead,
+)
 from bot.services.projects import creatable_projects, get_project, project_team
 from bot.services.subscriptions import subscribe
+from bot.services.users import list_members
 from bot.states import DraftTask
 
 router = Router(name="draft")
@@ -76,37 +81,28 @@ async def start_draft(
         await message.answer(i18n.get("err-no-workspace"))
         return
     projects = await creatable_projects(session, user)
-    if not projects:
+    # Managers (admin / any lead) may also create a task with no project.
+    manager = is_admin(user) or await is_any_lead(session, user.telegram_id)
+    if not projects and not manager:
         await message.answer(i18n.get("draft-no-projects"))
         return
     await state.clear()
     await state.set_state(DraftTask.waiting_project)
-    await message.answer(
-        i18n.get("task-choose-project"),
-        reply_markup=projects_keyboard(projects, prefix="dproj"),
-    )
+    kb = InlineKeyboardBuilder()
+    for p in projects:
+        kb.button(text=p.name, callback_data=f"dproj:{p.id}")
+    kb.adjust(1)
+    if manager:
+        kb.row(InlineKeyboardButton(text=i18n.get("draft-no-project-btn"), callback_data="dproj:none"))
+    await message.answer(i18n.get("task-choose-project"), reply_markup=kb.as_markup())
 
 
-@router.callback_query(DraftTask.waiting_project, F.data.startswith("dproj:"))
-async def draft_project_chosen(
-    call: CallbackQuery,
-    user: User,
-    session: AsyncSession,
-    state: FSMContext,
-    i18n: I18nContext,
-) -> None:
-    project_id = call.data.split(":", 1)[1]
-    if not await can_create_in(session, user, project_id):
-        await call.answer(i18n.get("err-no-permission"), show_alert=True)
-        return
-    project = await get_project(session, project_id)
-    if project is None or not project.team_id:
-        await call.answer(i18n.get("err-no-projects"), show_alert=True)
-        return
+async def _begin_draft(call, state, i18n, *, project_id, team_id, project_name) -> None:
+    """Initialise an empty draft and move to the title step (project or no-project)."""
     await state.update_data(
         draft_project_id=project_id,
-        draft_team_id=project.team_id,
-        draft_project_name=project.name,
+        draft_team_id=team_id,
+        draft_project_name=project_name,
         draft_title=None,
         draft_desc=None,
         draft_priority=None,
@@ -122,6 +118,67 @@ async def draft_project_chosen(
     await state.set_state(DraftTask.waiting_title)
     await call.message.edit_text(i18n.get("draft-send-title"), reply_markup=_cancel_kb(i18n))
     await call.answer()
+
+
+@router.callback_query(DraftTask.waiting_project, F.data.startswith("dproj:"))
+async def draft_project_chosen(
+    call: CallbackQuery,
+    user: User,
+    session: AsyncSession,
+    state: FSMContext,
+    i18n: I18nContext,
+) -> None:
+    raw = call.data.split(":", 1)[1]
+    if raw == "none":
+        # No-project task: needs a team. One team → use it; several → let them pick.
+        if not await can_create_in(session, user, None):
+            await call.answer(i18n.get("err-no-permission"), show_alert=True)
+            return
+        teams = await (await workspace.get_client(session)).teams()
+        if not teams:
+            await call.answer(i18n.get("err-no-projects"), show_alert=True)
+            return
+        if len(teams) == 1:
+            await _begin_draft(
+                call, state, i18n, project_id=None,
+                team_id=teams[0]["id"], project_name=i18n.get("draft-no-project"),
+            )
+            return
+        kb = InlineKeyboardBuilder()
+        for t in teams:
+            kb.button(text=t["name"], callback_data=f"dteam:{t['id']}")
+        kb.adjust(1)
+        kb.row(InlineKeyboardButton(text=i18n.get("draft-btn-cancel"), callback_data="dft:cancel"))
+        await call.message.edit_text(i18n.get("draft-choose-team"), reply_markup=kb.as_markup())
+        await call.answer()
+        return
+
+    project_id = raw
+    if not await can_create_in(session, user, project_id):
+        await call.answer(i18n.get("err-no-permission"), show_alert=True)
+        return
+    project = await get_project(session, project_id)
+    if project is None or not project.team_id:
+        await call.answer(i18n.get("err-no-projects"), show_alert=True)
+        return
+    await _begin_draft(
+        call, state, i18n, project_id=project_id,
+        team_id=project.team_id, project_name=project.name,
+    )
+
+
+@router.callback_query(DraftTask.waiting_project, F.data.startswith("dteam:"))
+async def draft_team_chosen(
+    call: CallbackQuery, user: User, session: AsyncSession, state: FSMContext, i18n: I18nContext
+) -> None:
+    if not await can_create_in(session, user, None):
+        await call.answer(i18n.get("err-no-permission"), show_alert=True)
+        return
+    team_id = call.data.split(":", 1)[1]
+    await _begin_draft(
+        call, state, i18n, project_id=None, team_id=team_id,
+        project_name=i18n.get("draft-no-project"),
+    )
 
 
 # ── title / description text input ───────────────────────────
@@ -434,9 +491,13 @@ async def draft_show_assignee(
     data = await state.get_data()
     project_id = data.get("draft_project_id")
     kb = InlineKeyboardBuilder()
-    # Members may only assign the task to themselves or leave it unassigned;
-    # leads/admins get the full team picker.
-    if await can_manage_task(session, user, project_id):
+    if project_id is None:
+        # No-project task → assign anyone in the company.
+        for m in await list_members(session):
+            kb.button(text=m.display_name, callback_data=f"dasg:{m.telegram_id}")
+        kb.adjust(2)
+    elif await can_manage_task(session, user, project_id):
+        # Leads/admins get the full project team picker.
         team = await project_team(session, project_id)
         if not team:
             await call.answer(i18n.get("assign-no-team"), show_alert=True)
@@ -445,6 +506,7 @@ async def draft_show_assignee(
             kb.button(text=m.display_name, callback_data=f"dasg:{m.telegram_id}")
         kb.adjust(2)
     else:
+        # Members may only assign themselves or leave it unassigned.
         kb.button(text=i18n.get("draft-assign-self"), callback_data=f"dasg:{user.telegram_id}")
         kb.adjust(1)
     kb.row(InlineKeyboardButton(text=i18n.get("assign-none"), callback_data="dasg:none"))
@@ -527,17 +589,14 @@ async def draft_publish(
     i18n: I18nContext,
 ) -> None:
     data = await state.get_data()
-    project_id = data.get("draft_project_id")
+    project_id = data.get("draft_project_id")  # None for a no-project task
+    team_id = data.get("draft_team_id")
     title = (data.get("draft_title") or "").strip()
-    if not project_id or not title:
+    if not title or not team_id:
         await call.answer(i18n.get("draft-send-title"), show_alert=True)
         return
     if not await can_create_in(session, user, project_id):
         await call.answer(i18n.get("err-no-permission"), show_alert=True)
-        return
-    project = await get_project(session, project_id)
-    if project is None or not project.team_id:
-        await call.answer(i18n.get("err-no-projects"), show_alert=True)
         return
 
     client = await workspace.get_client(session)
@@ -546,11 +605,11 @@ async def draft_publish(
     )
     label_ids = list(data.get("draft_label_ids") or [])
     if assignee is not None and assignee.linear_label:
-        label_ids.append(await client.ensure_label(project.team_id, assignee.linear_label))
+        label_ids.append(await client.ensure_label(team_id, assignee.linear_label))
 
     issue = await client.create_issue(
         title=title,
-        team_id=project.team_id,
+        team_id=team_id,
         description=(data.get("draft_desc") or "").strip() or None,
         project_id=project_id,
         label_ids=label_ids or None,

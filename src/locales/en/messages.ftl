@@ -54,6 +54,9 @@ draft-hint = Review the fields and tap “Publish”.
 draft-canceled = Task creation canceled.
 draft-no-projects = You can't create tasks yet. Ask an admin to add you to a project.
 draft-assign-self = 👤 Assign to me
+draft-no-project-btn = ➖ No project
+draft-no-project = (no project)
+draft-choose-team = Choose a team:
 admin-new-user = 🆕 New user { $name } is awaiting approval. Open "Management" → "Roles" to grant access.
 
 assign-choose-member = Assign to whom?

@@ -75,9 +75,12 @@ async def can_create_in(session: AsyncSession, user: User, project_id: str) -> b
         return False
     if is_admin(user):
         return True
+    if not project_id:
+        # A task with no project — allowed for leads (managers) anywhere.
+        return await is_any_lead(session, user.telegram_id)
     from bot.services.projects import is_project_team
 
-    return await is_project_team(session, user.telegram_id, project_id or "")
+    return await is_project_team(session, user.telegram_id, project_id)
 
 
 async def can_set_status(
