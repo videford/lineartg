@@ -24,14 +24,24 @@ router = Router(name="tasklist")
 
 PAGE = 10
 
-# (callback type, i18n label key, Linear state.type matched). "all" = no filter.
+# (callback key, i18n label key, Linear state.type matched).
+# "active" = everything except completed/canceled (the default view).
 FILTERS = [
-    ("all", "list-f-all", None),
+    ("active", "list-f-active", None),
+    ("backlog", "list-f-backlog", "backlog"),
     ("unstarted", "list-f-todo", "unstarted"),
     ("started", "list-f-inprogress", "started"),
     ("completed", "list-f-done", "completed"),
-    ("backlog", "list-f-backlog", "backlog"),
 ]
+
+# Canceled tasks are never shown (no filter selects them).
+CLOSED = {"completed", "canceled"}
+
+
+def _matches(item: dict, flt: str) -> bool:
+    if flt == "active":
+        return item["state_type"] not in CLOSED
+    return item["state_type"] == flt
 
 
 def _small(issue: dict) -> dict:
@@ -62,7 +72,7 @@ async def show_list(
 ) -> None:
     await state.update_data(
         list_all=[_small(i) for i in issues],
-        list_filter="all",
+        list_filter="active",
         list_page=0,
         list_title=title,
     )
@@ -74,11 +84,11 @@ async def _render(
 ) -> None:
     data = await state.get_data()
     items: list[dict] = data.get("list_all", [])
-    flt: str = data.get("list_filter", "all")
+    flt: str = data.get("list_filter", "active")
     page: int = data.get("list_page", 0)
     title: str = data.get("list_title", "")
 
-    view = [it for it in items if flt == "all" or it["state_type"] == flt]
+    view = [it for it in items if _matches(it, flt)]
     view.sort(key=_prio_key)
     await state.update_data(list_view_ids=[it["id"] for it in view])
 

@@ -71,6 +71,7 @@ search-results = Search results
 list-count = total: { $n }
 list-empty = No tasks for this filter.
 list-f-all = All
+list-f-active = Active
 list-f-todo = Todo
 list-f-inprogress = In Progress
 list-f-done = Done

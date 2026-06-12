@@ -71,6 +71,7 @@ search-results = Результаты поиска
 list-count = всего: { $n }
 list-empty = Нет задач по этому фильтру.
 list-f-all = Все
+list-f-active = Активные
 list-f-todo = К выполнению
 list-f-inprogress = В работе
 list-f-done = Готово

@@ -71,6 +71,7 @@ search-results = Qidiruv natijalari
 list-count = jami: { $n }
 list-empty = Bu filtr boʻyicha vazifalar yoʻq.
 list-f-all = Hammasi
+list-f-active = Faol
 list-f-todo = Bajariladi
 list-f-inprogress = Jarayonda
 list-f-done = Tayyor

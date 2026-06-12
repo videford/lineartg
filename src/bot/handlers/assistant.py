@@ -25,7 +25,12 @@ from bot.dates import fmt_date, parse_date
 from bot.db import User
 from bot.handlers import draft as draft_h
 from bot.services import workspace
-from bot.services.permissions import can_create_in, can_manage_task
+from bot.services.permissions import (
+    can_create_in,
+    can_manage_task,
+    is_admin,
+    is_any_lead,
+)
 from bot.services.projects import creatable_projects
 from bot.services.users import OWNER_PREFIX, list_members
 
@@ -88,7 +93,10 @@ TOOLS = [
                 "assignee": {"type": "string", "description": "'me', 'none', or a person's name"},
                 "due": {"type": "string", "description": "Due date as DD.MM.YYYY"},
                 "priority": {"type": "string", "description": "urgent/high/medium/low/none"},
-                "project": {"type": "string", "description": "Project name (optional)"},
+                "project": {
+                    "type": "string",
+                    "description": "Project name; or 'none' for a task with no project (admins/leads only)",
+                },
             },
             "required": ["title"],
         },
@@ -173,7 +181,7 @@ async def handle(
                 return json.dumps([_brief(i, label_to_name) for i in issues], ensure_ascii=False)
 
             if name == "create_task":
-                return await _prepare_draft(session, user, projects, ctx, args)
+                return await _prepare_draft(session, user, projects, ctx, args, client, i18n)
         except Exception as exc:  # noqa: BLE001
             log.exception("AI tool %s failed", name)
             return json.dumps({"error": str(exc)})
@@ -245,30 +253,44 @@ async def _list_tasks_issues(client, user, members, args) -> list[dict] | None:
     return [i for i in issues if _keep_status(i, status)]
 
 
-async def _prepare_draft(session, user, projects, ctx, args) -> str:
+_NO_PROJECT = {"none", "no", "no project", "без проекта", "loyihasiz", "-", "нет"}
+
+
+async def _prepare_draft(session, user, projects, ctx, args, client, i18n) -> str:
     title = (args.get("title") or "").strip()
     if not title:
         return json.dumps({"error": "title is required"})
-    if not projects:
-        return json.dumps({"error": "you cannot create tasks (ask an admin to add you to a project)"})
 
-    # Resolve the project.
-    name = (args.get("project") or "").strip().lower()
-    if name:
-        proj = next((p for p in projects if name in p.name.lower()), None)
-    elif len(projects) == 1:
-        proj = projects[0]
+    manager = is_admin(user) or await is_any_lead(session, user.telegram_id)
+    proj_arg = (args.get("project") or "").strip().lower()
+
+    if proj_arg in _NO_PROJECT:
+        # Task with no project — managers only; resolve a team to attach it to.
+        if not manager:
+            return json.dumps({"error": "only admins/leads can create tasks without a project"})
+        teams = await client.teams()
+        if not teams:
+            return json.dumps({"error": "no team available"})
+        project_id, team_id = None, teams[0]["id"]
+        project_name = i18n.get("draft-no-project")
+        is_manager = True
     else:
-        proj = None
-    if proj is None:
-        return json.dumps(
-            {"error": "which project?", "projects": [p.name for p in projects]}
-        )
-    if not proj.team_id or not await can_create_in(session, user, proj.id):
-        return json.dumps({"error": "no permission to create in this project"})
+        if proj_arg:
+            proj = next((p for p in projects if proj_arg in p.name.lower()), None)
+        elif len(projects) == 1:
+            proj = projects[0]
+        else:
+            proj = None
+        if proj is None:
+            return json.dumps(
+                {"error": "which project? (or say 'no project')", "projects": [p.name for p in projects]}
+            )
+        if not proj.team_id or not await can_create_in(session, user, proj.id):
+            return json.dumps({"error": "no permission to create in this project"})
+        project_id, team_id, project_name = proj.id, proj.team_id, proj.name
+        is_manager = await can_manage_task(session, user, proj.id)
 
-    is_manager = await can_manage_task(session, user, proj.id)
-    # Assignee: members may only assign themselves or leave it unassigned.
+    # Assignee: managers (incl. no-project) may assign anyone; members → self/none.
     raw_assignee = (args.get("assignee") or "").strip().lower()
     assignee_id = None
     if raw_assignee in ("me", "self", "я", "men"):
@@ -288,9 +310,9 @@ async def _prepare_draft(session, user, projects, ctx, args) -> str:
         priority = int(prio_raw)
 
     ctx["draft"] = {
-        "draft_project_id": proj.id,
-        "draft_team_id": proj.team_id,
-        "draft_project_name": proj.name,
+        "draft_project_id": project_id,
+        "draft_team_id": team_id,
+        "draft_project_name": project_name,
         "draft_title": title,
         "draft_desc": (args.get("description") or "").strip(),
         "draft_priority": priority,
@@ -322,7 +344,8 @@ def _system_prompt(user: User, projects, members) -> str:
         "returned by the tools; never invent task identifiers, names or numbers.\n"
         "- When the user wants to add/create a task, call create_task. It opens a preview the "
         "user must confirm — do NOT claim the task is created. After calling it, reply briefly "
-        "that you've prepared a draft for review.\n"
+        "that you've prepared a draft for review. If the user wants a task not tied to any "
+        "project, pass project='none' (allowed for admins/leads).\n"
         "If a request is ambiguous (e.g. which project), ask a short clarifying question instead "
         "of guessing.\n\n"
         "Formatting (IMPORTANT):\n"
