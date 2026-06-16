@@ -16,7 +16,7 @@ from aiohttp import web
 from bot.config import settings
 from bot.handlers import build_router
 from bot.middlewares import DbSessionMiddleware, RegistrationGate, UserLocaleManager
-from bot.webhooks import linear_webhook, oauth_callback
+from bot.webhooks import feedback_report, linear_webhook, oauth_callback
 
 LOCALES_PATH = Path(__file__).resolve().parents[1] / "locales" / "{locale}"
 
@@ -86,7 +86,8 @@ def create_app() -> web.Application:
     dp = build_dispatcher(i18n_core)
     dp.startup.register(on_startup)
 
-    app = web.Application()
+    # 20 MB body cap so base64 screenshots in /report aren't rejected (413).
+    app = web.Application(client_max_size=20 * 1024 * 1024)
     app["bot"] = bot
     app["i18n_core"] = i18n_core
 
@@ -100,6 +101,8 @@ def create_app() -> web.Application:
     app.router.add_post("/linear/webhook", linear_webhook)
     app.router.add_get("/linear/oauth/callback", oauth_callback)
     app.router.add_get("/healthz", lambda _: web.Response(text="ok"))
+    # Website feedback → Linear task
+    app.router.add_post("/report", feedback_report)
 
     return app
 

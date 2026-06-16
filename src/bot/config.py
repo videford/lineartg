@@ -36,6 +36,10 @@ class Settings(BaseSettings):
     gemini_api_key: str = ""
     ai_model: str = ""  # optional override; sensible default per provider
 
+    # Website feedback → Linear (POST /report). Empty token disables the endpoint.
+    feedback_api_token: str = ""
+    feedback_project_name: str = "Bugs"  # Linear project all feedback lands in
+
     # App
     bootstrap_admin_ids: str = ""
     default_lang: str = "ru"

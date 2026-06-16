@@ -205,3 +205,23 @@ class LinearClient:
         if not result["success"]:
             raise LinearError("commentCreate failed")
         return result["comment"]
+
+    async def upload_file(
+        self, content: bytes, *, filename: str, content_type: str
+    ) -> str | None:
+        """Upload bytes to Linear's storage and return the public asset URL (for
+        embedding in an issue/comment as a Markdown image). None on failure."""
+        data = await self._execute(
+            queries.FILE_UPLOAD,
+            {"contentType": content_type, "filename": filename, "size": len(content)},
+        )
+        result = data.get("fileUpload") or {}
+        upload = result.get("uploadFile") or {}
+        if not result.get("success") or not upload.get("uploadUrl"):
+            return None
+        headers = {h["key"]: h["value"] for h in (upload.get("headers") or [])}
+        headers.setdefault("Content-Type", content_type)
+        async with httpx.AsyncClient(timeout=60) as client:
+            put = await client.put(upload["uploadUrl"], content=content, headers=headers)
+            put.raise_for_status()
+        return upload.get("assetUrl")

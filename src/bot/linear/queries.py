@@ -124,6 +124,20 @@ mutation CommentCreate($input: CommentCreateInput!) {
 }
 """
 
+# Step 1 of an attachment upload: ask Linear for a presigned upload URL.
+FILE_UPLOAD = """
+mutation FileUpload($contentType: String!, $filename: String!, $size: Int!) {
+  fileUpload(contentType: $contentType, filename: $filename, size: $size) {
+    success
+    uploadFile {
+      uploadUrl
+      assetUrl
+      headers { key value }
+    }
+  }
+}
+"""
+
 ALL_ISSUES = """
 query AllIssues {
   issues(first: 100, orderBy: updatedAt) {
