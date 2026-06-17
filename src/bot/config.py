@@ -40,6 +40,10 @@ class Settings(BaseSettings):
     feedback_api_token: str = ""
     feedback_project_name: str = "Bugs"  # Linear project all feedback lands in
 
+    # Generic task-creation API (POST /create/linear/task) for other services.
+    # Falls back to feedback_api_token if unset; empty disables the endpoint.
+    tasks_api_token: str = ""
+
     # App
     bootstrap_admin_ids: str = ""
     default_lang: str = "ru"

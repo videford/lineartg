@@ -86,6 +86,14 @@ FEEDBACK_PROJECT_NAME = Bugs        # проект Linear, куда падают
 - Коллеге: `FEEDBACK_BOT_URL = https://<домен>/report`, `FEEDBACK_BOT_TOKEN = <тот же секрет>`.
   Тело — как у его «report-бота» (type, message, page, filters, env, user, tags, photo).
 
+## Шаг 11 (опционально). Generic API создания задач
+Для других сервисов (CI/девопс): `POST /create/linear/task` (заголовок `X-API-Token`).
+```
+TASKS_API_TOKEN = <секрет для этого потребителя>   # если пусто — берётся FEEDBACK_API_TOKEN
+```
+Тело: `{ title (обяз.), description?, photo?(base64/dataURL), project?, labels?[], priority?(urgent|high|medium|low|none|0-4), due?(DD.MM.YYYY), author? }`
+Ответ: `{ ok, identifier, url }`. Креды Linear потребителю не нужны — задачу создаёт бот.
+
 ## Обновления
 Любой `git push` в подключённую ветку → Railway пересобирает и передеплоивает.
 Миграции применяются автоматически при старте контейнера.

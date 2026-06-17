@@ -21,7 +21,12 @@ from aiohttp import web
 
 from bot.config import settings
 from bot.main import LOCALES_PATH, build_dispatcher, set_commands
-from bot.webhooks import feedback_report, linear_webhook, oauth_callback
+from bot.webhooks import (
+    create_linear_task,
+    feedback_report,
+    linear_webhook,
+    oauth_callback,
+)
 
 
 async def _run() -> None:
@@ -38,6 +43,7 @@ async def _run() -> None:
     app.router.add_get("/linear/oauth/callback", oauth_callback)
     app.router.add_get("/healthz", lambda _: web.Response(text="ok"))
     app.router.add_post("/report", feedback_report)
+    app.router.add_post("/create/linear/task", create_linear_task)
 
     runner = web.AppRunner(app)
     await runner.setup()

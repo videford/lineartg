@@ -16,7 +16,12 @@ from aiohttp import web
 from bot.config import settings
 from bot.handlers import build_router
 from bot.middlewares import DbSessionMiddleware, RegistrationGate, UserLocaleManager
-from bot.webhooks import feedback_report, linear_webhook, oauth_callback
+from bot.webhooks import (
+    create_linear_task,
+    feedback_report,
+    linear_webhook,
+    oauth_callback,
+)
 
 LOCALES_PATH = Path(__file__).resolve().parents[1] / "locales" / "{locale}"
 
@@ -103,6 +108,8 @@ def create_app() -> web.Application:
     app.router.add_get("/healthz", lambda _: web.Response(text="ok"))
     # Website feedback → Linear task
     app.router.add_post("/report", feedback_report)
+    # Generic task-creation API for other services
+    app.router.add_post("/create/linear/task", create_linear_task)
 
     return app
 
